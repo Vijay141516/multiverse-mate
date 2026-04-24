@@ -59,7 +59,7 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
     : isResigned ? (resignedColor === 'white' ? 'Black' : 'White')
     : null;
     
-  const didIWin = winner?.toLowerCase() === config.playerColor;
+  const didIWin = winner?.toLowerCase() === playerColor.toLowerCase();
 
   const SidebarContent = () => (
     <>
