@@ -21,9 +21,10 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: VITE_API_URL
+      - key: API_HOST
         fromService:
           type: web
           name: multiverse-mate-api
           property: host
-        value: ${VITE_API_URL}/api
+      - key: VITE_API_URL
+        value: https://${API_HOST}/api
