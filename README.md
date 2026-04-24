@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Anime Chess Banner](https://ibb.co/nsBk9xgS+)
+![Anime Chess Banner](https://img.shields.io/badge/Anime-Chess-purple?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xOSAyMlY4bC02LTYtNiA2djE0SDV2LTJIN3YtMmgxMHYyaDJ2MmgtMnpNMTMgMTVoLTJ2LTJoMnYyem0wLTRoLTJWOWgydjJ6Ii8+PC9zdmc+)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
@@ -18,28 +18,19 @@
 
 ## 🌌 What is Multiverse Mate?
 
-**Multiverse Mate** is a full-stack anime-themed chess game where your favorite characters from **Jujutsu Kaisen, My Hero Academia, Naruto**, and more become your chess pieces. Play against an AI bot, go head-to-head locally, or challenge a friend online with a room code — all wrapped in a stunning dark UI with pixel-art anime sprites.
+**Multiverse Mate** is a full-stack anime-themed chess game where your favorite characters from **Jujutsu Kaisen, My Hero Academia, Naruto**, and more become your chess pieces. Play against an AI bot or challenge a friend in real-time multiplayer — all wrapped in a slick dark UI with pixel-art anime sprites.
 
-> *"Gojo Satoru is your Queen. His skill? Hollow Purple. ♟️"*
-
----
-
-## 📸 Screenshot
-
-![Multiverse Mate Roster Showcase](./screenshot.png)
+> *"What if Gojo Satoru was your king and All Might was your rook?"*
 
 ---
 
 ## ✨ Features
 
-- 🎭 **Anime Pixel Art Pieces** — Characters from JJK, MHA, Naruto and more, each with their own chess role
-- ⚡ **Character Skills** — Each piece has a named skill (e.g. Gojo → *Hollow Purple*)
-- 🤖 **Play vs AI** — Battle an AI bot with difficulty selection
-- 👥 **Local 2 Player** — Pass-and-play on the same device
-- 🌐 **Play Online** — Real-time multiplayer via room code
-- 🎮 **Classic & Battle Modes** — Standard chess + a Battle variant
+- 🎭 **Anime Pixel Art Pieces** — Mixed characters from JJK, MHA, Naruto and more
+- 🤖 **AI Bot** — Play against an AI with selectable difficulty (Balanced, and more)
+- 🌐 **Online Multiplayer** — Challenge friends in real-time
 - ⏱️ **Chess Clock** — Timed matches with per-player countdown
-- 🎨 **Roster Showcase** — Preview all characters before the game starts
+- 🎮 **Classic Mode** — Standard chess rules with anime aesthetics
 - 📱 **Mobile Friendly** — Playable on phone browsers
 - 🌑 **Dark Theme** — Easy on the eyes, hard on your opponents
 
@@ -115,26 +106,22 @@ pnpm dev
 ## 🎮 How to Play
 
 1. Open [multiverse-mate-chess.onrender.com](https://multiverse-mate-chess.onrender.com)
-2. Browse the **Roster Showcase** — see all anime characters and their chess roles
-3. Pick a **Game Mode** — Classic or Battle
-4. Choose **Play As** — White or Black
-5. Select how you want to play:
-   - **Play vs AI** — solo against the bot
-   - **Local 2 Player** — same device with a friend
-   - **Play Online** — enter a room code to challenge anyone
-6. Tap a piece to select, tap a square to move
-7. Checkmate the opponent's King to win ♟️
+2. Choose **vs AI Bot** or **Multiplayer**
+3. Select difficulty (Balanced recommended for beginners)
+4. Your pieces are at the bottom — White starts first
+5. Tap a piece to select, then tap a square to move
+6. Checkmate the opponent's King to win ♟️
 
 ---
 
-## 🤖 Built With AI Agents and single dev
+## 🤖 Built With AI Agents
 
 This project was built using a multi-agent AI workflow:
 
 - **[Google Antigravity](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/)** — VS Code-based agentic IDE with Gemini 3.1 Pro + Claude — used for parallel agent development
 - **[Replit AI](https://replit.com)** — Used for running, testing, and iterating
 
-A single dev + Multiple AI agents worked simultaneously on different parts of the codebase — frontend, backend, API layer, and database — orchestrated via Antigravity's Manager view.
+Multiple AI agents worked simultaneously on different parts of the codebase — frontend, backend, API layer, and database — orchestrated via Antigravity's Manager view.
 
 ---
 
