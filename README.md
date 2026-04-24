@@ -127,14 +127,14 @@ pnpm dev
 
 ---
 
-## 🤖 Built With AI Agents
+## 🤖 Built With AI Agents and single dev
 
 This project was built using a multi-agent AI workflow:
 
 - **[Google Antigravity](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/)** — VS Code-based agentic IDE with Gemini 3.1 Pro + Claude — used for parallel agent development
 - **[Replit AI](https://replit.com)** — Used for running, testing, and iterating
 
-Multiple AI agents worked simultaneously on different parts of the codebase — frontend, backend, API layer, and database — orchestrated via Antigravity's Manager view.
+A single dev + Multiple AI agents worked simultaneously on different parts of the codebase — frontend, backend, API layer, and database — orchestrated via Antigravity's Manager view.
 
 ---
 
