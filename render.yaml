@@ -14,7 +14,7 @@ services:
   - type: web
     name: multiverse-mate-chess
     runtime: static
-    buildCommand: pnpm install && pnpm --filter @workspace/anime-chess run build
+    buildCommand: pnpm install && pnpm --filter @workspace/anime-chess... run build
     staticPublishPath: artifacts/anime-chess/dist
     routes:
       - type: rewrite
