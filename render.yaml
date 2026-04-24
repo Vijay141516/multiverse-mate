@@ -1,0 +1,25 @@
+services:
+  # 1. The Backend (API Server)
+  - type: web
+    name: multiverse-mate-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # 2. The Frontend (Static Site)
+  - type: static
+    name: multiverse-mate-chess
+    buildCommand: pnpm install && pnpm --filter @workspace/anime-chess run build
+    publishPath: artifacts/anime-chess/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: multiverse-mate-api
+          property: host
+        # We append /api because the server routes start with /api
+        value: ${VITE_API_URL}/api
