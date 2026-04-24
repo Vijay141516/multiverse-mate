@@ -13,9 +13,13 @@ services:
   # 2. The Frontend (Static Site)
   - type: web
     name: multiverse-mate-chess
-    env: static
+    runtime: static
     buildCommand: pnpm install && pnpm --filter @workspace/anime-chess run build
-    publishPath: artifacts/anime-chess/dist
+    staticPublishPath: artifacts/anime-chess/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_URL
         fromService:
