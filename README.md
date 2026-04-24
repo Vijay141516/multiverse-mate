@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Anime Chess Banner](https://img.shields.io/badge/Anime-Chess-purple?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xOSAyMlY4bC02LTYtNiA2djE0SDV2LTJIN3YtMmgxMHYyaDJ2MmgtMnpNMTMgMTVoLTJ2LTJoMnYyem0wLTRoLTJWOWgydjJ6Ii8+PC9zdmc+)
+![Anime Chess Banner](https://ibb.co/nsBk9xgS+)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
