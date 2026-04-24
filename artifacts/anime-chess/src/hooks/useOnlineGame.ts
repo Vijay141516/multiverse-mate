@@ -6,8 +6,8 @@ import {
 } from '../lib/chess';
 import { CaptureEffect } from './useChessGame';
 
-/* ── The API server is proxied at /api on the same Replit domain ── */
-const API = '/api/chess';
+/* ── The API server URL ── */
+const API = (import.meta.env.VITE_API_URL || '/api') + '/chess';
 
 export type OnlineStatus =
   | 'idle'
