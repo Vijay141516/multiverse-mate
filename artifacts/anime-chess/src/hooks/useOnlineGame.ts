@@ -28,7 +28,7 @@ interface RoomMove {
   index: number;
 }
 
-export function useOnlineGame(playerName: string = 'Player', avatarId: number = 1) {
+export function useOnlineGame(playerName: string = 'Player', avatarId: number = 1, avatarUrl: string = '') {
   const [status, setStatus]         = useState<OnlineStatus>('idle');
   const [roomCode, setRoomCode]     = useState<string>('');
   const [playerColor, setPlayerColor] = useState<Color>('white');
@@ -37,7 +37,9 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const [whiteName, setWhiteName]   = useState<string>('');
   const [blackName, setBlackName]   = useState<string>('');
   const [whiteAvatarId, setWhiteAvatarId] = useState<number>(1);
+  const [whiteAvatarUrl, setWhiteAvatarUrl] = useState<string>('');
   const [blackAvatarId, setBlackAvatarId] = useState<number | null>(null);
+  const [blackAvatarUrl, setBlackAvatarUrl] = useState<string>('');
   const [isMatchmaking, setIsMatchmaking] = useState<boolean>(false);
 
   const [realGameState, setRealGameState]   = useState<GameState>(createInitialGameState());
@@ -160,7 +162,9 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
         whiteName?: string;
         blackName?: string;
         whiteAvatarId?: number;
+        whiteAvatarUrl?: string | null;
         blackAvatarId?: number | null;
+        blackAvatarUrl?: string | null;
       };
 
       if (status === 'waiting' && data.hasOpponent) {
@@ -175,7 +179,9 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       if (data.whiteName) setWhiteName(data.whiteName);
       if (data.blackName) setBlackName(data.blackName);
       if (typeof data.whiteAvatarId === 'number') setWhiteAvatarId(data.whiteAvatarId);
+      if (data.whiteAvatarUrl !== undefined) setWhiteAvatarUrl(data.whiteAvatarUrl || '');
       if (typeof data.blackAvatarId === 'number') setBlackAvatarId(data.blackAvatarId);
+      if (data.blackAvatarUrl !== undefined) setBlackAvatarUrl(data.blackAvatarUrl || '');
 
       if (data.rematchAccepted) {
          setGameState(createInitialGameState());
@@ -424,7 +430,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       const res = await fetch(`${API}/rooms/${code}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, playerName, avatarId }),
+        body: JSON.stringify({ playerId, playerName, avatarId, avatarUrl }),
       });
       if (!res.ok) {
         const err = await res.json() as { error: string };
@@ -441,7 +447,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       setStatus('error');
       setError((e as Error).message);
     }
-  }, [playerId]);
+  }, [playerId, playerName, avatarId, avatarUrl]);
 
   const resetOnline = useCallback(() => {
     clearPoll();
@@ -484,7 +490,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       const res = await fetch(`${API}/matchmaking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, playerName, avatarId }),
+        body: JSON.stringify({ playerId, playerName, avatarId, avatarUrl }),
       });
       if (!res.ok) throw new Error('Matchmaking failed');
       const data = await res.json() as { status: 'waiting' | 'found'; code: string; color: Color };
@@ -534,13 +540,30 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
     materialScore, whiteRank, blackRank,
     handleSquareClick,
     createRoom, joinRoom, resetOnline,
-    premove, premovesEnabled, togglePremoves,
-    resignedColor, rematchRequestedBy, resign, requestRematch,
-    timeLimit, whiteTime, blackTime,
-    whiteName, blackName,
-    whiteAvatarId, blackAvatarId,
-    isMatchmaking, startMatchmaking,
-    viewIndex, goToMove,
-    analysis, runAnalysis, isAnalyzing, analysisProgress,
+    whiteAvatarId,
+    whiteAvatarUrl,
+    blackAvatarId,
+    blackAvatarUrl,
+    isMatchmaking,
+    startMatchmaking,
+    cancelMatchmaking,
+    executeMove: makeMove,
+    resetGame: resetOnline,
+    resign,
+    whiteTime,
+    blackTime,
+    isResigned: !!resignedColor,
+    resignedColor,
+    rematchRequestedBy,
+    requestRematch,
+    premove,
+    premovesEnabled,
+    togglePremoves,
+    viewIndex,
+    goToMove,
+    analysis,
+    runAnalysis,
+    isAnalyzing,
+    analysisProgress
   };
 }

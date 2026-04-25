@@ -13,6 +13,7 @@ interface PlayerInfoProps {
   isAiThinking?: boolean;
   timeLeft?: number;
   avatarId?: number;
+  avatarUrl?: string;
 }
 
 const PIECE_SYMBOLS: Record<PieceType, string> = {
@@ -32,7 +33,7 @@ function groupCaptured(pieces: Piece[]): Partial<Record<PieceType, number>> {
 }
 
 export default function PlayerInfo({
-  color, name, rank, score, captured, isCurrentTurn, isCheck, isAiThinking, timeLeft, avatarId
+  color, name, rank, score, captured, isCurrentTurn, isCheck, isAiThinking, timeLeft, avatarId, avatarUrl
 }: PlayerInfoProps) {
   const groups = groupCaptured(captured);
   const capturedColor: Color = color === 'white' ? 'black' : 'white';
@@ -71,7 +72,9 @@ export default function PlayerInfo({
           ? 'bg-slate-100 text-slate-800'
           : 'bg-slate-800 text-white border border-purple-500/40'
       } ${isCurrentTurn ? 'ring-2 ring-green-400/70 ring-offset-1 ring-offset-transparent' : ''}`}>
-        {avatarId ? (
+        {avatarUrl ? (
+          <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+        ) : avatarId ? (
           <img src={`https://placewaifu.com/image/${avatarId}`} alt={name} className="w-full h-full object-cover" />
         ) : (
           name.charAt(0).toUpperCase()

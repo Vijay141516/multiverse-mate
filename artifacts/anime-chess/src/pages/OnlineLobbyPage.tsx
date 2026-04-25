@@ -52,7 +52,11 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
     isMatchmaking, startMatchmaking,
     viewIndex, goToMove,
     analysis, runAnalysis, isAnalyzing, analysisProgress
-  } = useOnlineGame(playerName, parseInt(localStorage.getItem('anime_chess_avatar_id') || '1'));
+  } = useOnlineGame(
+    playerName, 
+    parseInt(localStorage.getItem('anime_chess_avatar_id') || '1'),
+    localStorage.getItem('anime_chess_avatar_custom_url') || ''
+  );
 
   useEffect(() => {
     if (autoMatchmaking && status === 'idle') {
@@ -102,6 +106,8 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
 
   const topAvatarId = topColor === 'white' ? whiteAvatarId : (blackAvatarId || undefined);
   const bottomAvatarId = bottomColor === 'white' ? whiteAvatarId : (blackAvatarId || undefined);
+  const topAvatarUrl = topColor === 'white' ? whiteAvatarUrl : blackAvatarUrl;
+  const bottomAvatarUrl = bottomColor === 'white' ? whiteAvatarUrl : blackAvatarUrl;
 
 
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
@@ -319,6 +325,7 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
               isCheck={gameState.isCheck && gameState.currentTurn === topColor}
               timeLeft={topColor === 'white' ? whiteTime ?? undefined : blackTime ?? undefined}
               avatarId={topAvatarId}
+              avatarUrl={topAvatarUrl}
             />
           </div>
 
@@ -360,6 +367,7 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
               isCheck={gameState.isCheck && gameState.currentTurn === bottomColor}
               timeLeft={bottomColor === 'white' ? whiteTime ?? undefined : blackTime ?? undefined}
               avatarId={bottomAvatarId}
+              avatarUrl={bottomAvatarUrl}
             />
           </div>
 

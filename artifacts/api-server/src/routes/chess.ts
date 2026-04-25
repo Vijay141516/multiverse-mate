@@ -13,7 +13,9 @@ interface Room {
   blackId:     string | null;
   blackName:   string | null;
   whiteAvatarId: number;
+  whiteAvatarUrl: string | null;
   blackAvatarId: number | null;
+  blackAvatarUrl: string | null;
   moves:       RoomMove[];
   resignedColor: 'white' | 'black' | null;
   rematchRequestedBy: 'white' | 'black' | null;
@@ -59,7 +61,9 @@ chessRouter.post('/rooms', (req, res) => {
     blackId:      null,
     blackName:    null,
     whiteAvatarId: typeof req.body?.avatarId === 'number' ? req.body.avatarId : 1,
+    whiteAvatarUrl: req.body?.avatarUrl ?? null,
     blackAvatarId: null,
+    blackAvatarUrl: null,
     moves:        [],
     resignedColor: null,
     rematchRequestedBy: null,
@@ -82,9 +86,11 @@ chessRouter.post('/rooms/:code/join', (req, res) => {
   const playerId: string = req.body?.playerId ?? Math.random().toString(36).slice(2);
   const playerName: string = req.body?.playerName ?? 'Player 2';
   const avatarId: number = typeof req.body?.avatarId === 'number' ? req.body.avatarId : 2;
+  const avatarUrl: string | null = req.body?.avatarUrl ?? null;
   room.blackId      = playerId;
   room.blackName    = playerName;
   room.blackAvatarId = avatarId;
+  room.blackAvatarUrl = avatarUrl;
   room.lastActivity = Date.now();
 
   // If there's a timer, start it when player 2 joins
@@ -130,7 +136,9 @@ chessRouter.get('/rooms/:code', (req, res) => {
     whiteName:   room.whiteName,
     blackName:   room.blackName,
     whiteAvatarId: room.whiteAvatarId,
+    whiteAvatarUrl: room.whiteAvatarUrl,
     blackAvatarId: room.blackAvatarId,
+    blackAvatarUrl: room.blackAvatarUrl,
   });
 });
 
@@ -214,12 +222,15 @@ chessRouter.post('/rooms/:code/rematch', (req, res) => {
     const tempId = room.whiteId;
     const tempName = room.whiteName;
     const tempAvatar = room.whiteAvatarId;
+    const tempAvatarUrl = room.whiteAvatarUrl;
     room.whiteId = room.blackId!;
     room.whiteName = room.blackName!;
     room.whiteAvatarId = room.blackAvatarId!;
+    room.whiteAvatarUrl = room.blackAvatarUrl!;
     room.blackId = tempId;
     room.blackName = tempName;
     room.blackAvatarId = tempAvatar;
+    room.blackAvatarUrl = tempAvatarUrl;
   }
   
   room.lastActivity = Date.now();
@@ -256,6 +267,7 @@ chessRouter.post('/matchmaking', (req, res) => {
       room.blackId = playerId;
       room.blackName = playerName ?? 'Player 2';
       room.blackAvatarId = avatarId ?? 2;
+      room.blackAvatarUrl = avatarUrl ?? null;
       room.lastActivity = Date.now();
       if (room.timeLimit !== null) room.turnStartTime = Date.now();
       
@@ -275,7 +287,9 @@ chessRouter.post('/matchmaking', (req, res) => {
     blackId:      null,
     blackName:    null,
     whiteAvatarId: avatarId ?? 1,
+    whiteAvatarUrl: avatarUrl ?? null,
     blackAvatarId: null,
+    blackAvatarUrl: null,
     moves:        [],
     resignedColor: null,
     rematchRequestedBy: null,
