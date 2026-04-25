@@ -48,7 +48,7 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
     resignedColor, rematchRequestedBy, resign, requestRematch,
     timeLimit, whiteTime, blackTime,
     whiteName, blackName,
-    whiteAvatarId, blackAvatarId,
+    whiteAvatarId, whiteAvatarUrl, blackAvatarId, blackAvatarUrl,
     isMatchmaking, startMatchmaking,
     viewIndex, goToMove,
     analysis, runAnalysis, isAnalyzing, analysisProgress
