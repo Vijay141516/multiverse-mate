@@ -37,8 +37,22 @@ const API = getApiUrl();
 // Robust fetch helper to catch HTML-as-JSON errors
 async function apiFetch(endpoint: string, options?: RequestInit) {
   const url = endpoint.startsWith('http') ? endpoint : `${API}${endpoint}`;
+  
+  // Mobile optimization: Explicitly set CORS and disable caching
+  const fetchOptions: RequestInit = {
+    ...options,
+    mode: 'cors',
+    credentials: 'omit',
+    headers: {
+      ...options?.headers,
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    }
+  };
+
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, fetchOptions);
     const text = await res.text();
     
     if (text.trim().startsWith('<')) {
@@ -172,7 +186,8 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const poll = useCallback(async () => {
     if (!roomCode) return;
     try {
-      const data = await apiFetch(`/rooms/${roomCode}`);
+      // Mobile optimization: Use cache-busting timestamp
+      const data = await apiFetch(`/rooms/${roomCode}?t=${Date.now()}`);
 
       if (status === 'waiting' && data.hasOpponent) {
         setStatus('playing');
