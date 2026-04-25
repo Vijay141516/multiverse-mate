@@ -30,7 +30,7 @@ Every capture triggers a **full-screen VS battle animation** like a fighting gam
 
 ## 📸 Screenshots
 
-![Multiverse Mate Roster Showcase](./screenshot.png)
+![Multiverse Mate Roster Showcase](./screenshot-1.png)
 
 ---
 
