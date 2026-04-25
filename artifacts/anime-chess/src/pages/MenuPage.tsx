@@ -87,9 +87,27 @@ export default function MenuPage({
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        handleUpdateAvatarUrl(base64);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Compress image to max 400x400
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const max = 400;
+          if (width > height) {
+            if (width > max) { height *= max / width; width = max; }
+          } else {
+            if (height > max) { width *= max / height; height = max; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          handleUpdateAvatarUrl(compressedBase64);
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
