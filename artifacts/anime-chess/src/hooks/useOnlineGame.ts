@@ -50,6 +50,11 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
+  // Calculated game state must be defined early so hooks below can use it
+  const gameState = viewIndex !== null 
+    ? getGameStateAtMove(realGameState.moveHistory, viewIndex + 1)
+    : realGameState;
+
   const [selectedPos, setSelectedPos] = useState<Position | null>(null);
   const [legalMoves, setLegalMoves] = useState<Position[]>([]);
   const [lastMove, setLastMove]     = useState<Move | null>(null);
@@ -60,8 +65,10 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const [rematchRequestedBy, setRematchRequestedBy] = useState<Color | null>(null);
 
   const appliedMovesRef = useRef(0);
+  // Important: Ref must point to realGameState for server sync logic
   const gameStateRef    = useRef<GameState>(realGameState);
   gameStateRef.current  = realGameState;
+  
   const pendingMoveRef  = useRef<{ from: Position; to: Position; index: number } | null>(null);
   const pollRef         = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -186,18 +193,18 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
 
   const handleSquareClick = useCallback((pos: Position) => {
     if (status !== 'playing' || viewIndex !== null) return;
-    const gs = gameStateRef.current;
-    if (gs.isCheckmate || gs.isStalemate || gs.isDraw) return;
+    // Note: We use current gameState for clicks
+    if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw) return;
     
-    const piece = gs.board[pos.row][pos.col];
+    const piece = gameState.board[pos.row][pos.col];
 
-    if (gs.currentTurn !== playerColor) {
+    if (gameState.currentTurn !== playerColor) {
       if (!premovesEnabled) return;
       if (selectedPos) {
-        const pPiece = gs.board[selectedPos.row][selectedPos.col];
+        const pPiece = gameState.board[selectedPos.row][selectedPos.col];
         if (piece && piece.color === playerColor) {
            setSelectedPos(pos);
-           setLegalMoves(getLegalMoves(gs.board, pos, gs.enPassantTarget, gs.castlingRights));
+           setLegalMoves(getLegalMoves(gameState.board, pos, gameState.enPassantTarget, gameState.castlingRights));
            return;
         }
         if (pPiece && pPiece.color === playerColor) {
@@ -214,15 +221,15 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       }
       if (piece && piece.color === playerColor) {
         setSelectedPos(pos);
-        setLegalMoves(getLegalMoves(gs.board, pos, gs.enPassantTarget, gs.castlingRights));
+        setLegalMoves(getLegalMoves(gameState.board, pos, gameState.enPassantTarget, gameState.castlingRights));
       }
       return;
     }
 
     if (selectedPos) {
       let finalTo = pos;
-      const pPiece = gs.board[selectedPos.row][selectedPos.col];
-      const tPiece = gs.board[pos.row][pos.col];
+      const pPiece = gameState.board[selectedPos.row][selectedPos.col];
+      const tPiece = gameState.board[pos.row][pos.col];
       if (pPiece?.type === 'king' && tPiece?.type === 'rook' && pPiece.color === tPiece.color) {
         if (pos.col === 7) finalTo = { row: pos.row, col: 6 };
         if (pos.col === 0) finalTo = { row: pos.row, col: 2 };
@@ -234,9 +241,9 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
         const from = selectedPos;
         const to   = finalTo;
         const moveIndex = appliedMovesRef.current;
-        const attacker = gs.board[from.row][from.col];
-        const victim   = gs.board[to.row][to.col];
-        const newState = executeMove(gs, { from, to });
+        const attacker = gameState.board[from.row][from.col];
+        const victim   = gameState.board[to.row][to.col];
+        const newState = executeMove(gameState, { from, to });
 
         if (attacker && victim && attacker.color !== victim.color) {
           sounds.playCapture();
@@ -257,7 +264,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       }
       if (piece && piece.color === playerColor) {
         setSelectedPos(pos);
-        setLegalMoves(getLegalMoves(gs.board, pos, gs.enPassantTarget, gs.castlingRights));
+        setLegalMoves(getLegalMoves(gameState.board, pos, gameState.enPassantTarget, gameState.castlingRights));
         return;
       }
       setSelectedPos(null);
@@ -267,9 +274,9 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
 
     if (piece && piece.color === playerColor) {
       setSelectedPos(pos);
-      setLegalMoves(getLegalMoves(gs.board, pos, gs.enPassantTarget, gs.castlingRights));
+      setLegalMoves(getLegalMoves(gameState.board, pos, gameState.enPassantTarget, gameState.castlingRights));
     }
-  }, [status, playerColor, selectedPos, legalMoves, triggerCapture, submitMoveToServer, premovesEnabled, viewIndex]);
+  }, [status, playerColor, selectedPos, legalMoves, triggerCapture, submitMoveToServer, premovesEnabled, viewIndex, gameState]);
 
   const makeMove = useCallback((from: Position, to: Position) => {
     if (status !== 'playing' || viewIndex !== null) return;
@@ -440,9 +447,15 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
     return () => clearInterval(interval);
   }, [status, timeLimit, realGameState.currentTurn, resignedColor]);
 
-  const gameState = viewIndex !== null 
-    ? getGameStateAtMove(realGameState.moveHistory, viewIndex + 1)
-    : realGameState;
+  const goToMove = useCallback((idx: number | null) => {
+    if (idx !== null && idx >= realGameState.moveHistory.length) {
+      setViewIndex(null);
+    } else {
+      setViewIndex(idx);
+    }
+    setSelectedPos(null);
+    setLegalMoves([]);
+  }, [realGameState.moveHistory.length]);
 
   return {
     status, roomCode, playerColor, error,
