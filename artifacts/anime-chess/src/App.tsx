@@ -16,6 +16,7 @@ interface GameConfig {
   playerColor: Color;
   playerName: string;
   autoMatchmaking?: boolean;
+  aiDepth?: number;
 }
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
     playerMode: 'ai',
     playerColor: 'white',
     playerName: localStorage.getItem('anime_chess_player_name') || 'Player',
+    aiDepth: Number(localStorage.getItem('anime_chess_ai_depth') || '3'),
   });
   const [boardTheme, setBoardTheme] = useState<BoardTheme>(
     (localStorage.getItem('anime_chess_theme') as BoardTheme) || 'anime'
@@ -89,6 +91,7 @@ export default function App() {
 
   const handleStart = (cfg: GameConfig) => {
     localStorage.setItem('anime_chess_player_name', cfg.playerName);
+    if (cfg.aiDepth) localStorage.setItem('anime_chess_ai_depth', String(cfg.aiDepth));
     setConfig(cfg);
     if (cfg.playerMode === 'online') {
       setScreen('online');

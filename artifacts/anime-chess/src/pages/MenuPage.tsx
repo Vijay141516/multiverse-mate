@@ -58,6 +58,7 @@ export default function MenuPage({
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [premovesEnabled, setPremovesEnabled] = useState(() => localStorage.getItem('anime_chess_premoves') === 'true');
+  const [aiDepth, setAiDepth] = useState(() => Number(localStorage.getItem('anime_chess_ai_depth') || '3'));
 
   const handleTogglePremoves = () => {
     setPremovesEnabled(p => {
@@ -347,21 +348,28 @@ export default function MenuPage({
             )}
           </div>
 
-          {/* Play as */}
+          {/* AI Difficulty */}
           <div className="rounded-xl p-4 border"
             style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">Play As</p>
-            <div className="grid grid-cols-2 gap-2">
-              {(['white', 'black'] as Color[]).map(c => (
-                <button key={c} onClick={() => setPlayerColor(c)}
-                  className="px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 capitalize"
+            <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">AI Difficulty</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Novice', depth: 2 },
+                { label: 'Intermediate', depth: 3 },
+                { label: 'Grandmaster', depth: 4 }
+              ].map(d => (
+                <button key={d.depth} onClick={() => {
+                  setAiDepth(d.depth);
+                  localStorage.setItem('anime_chess_ai_depth', String(d.depth));
+                }}
+                  className="px-2 py-2 rounded-lg text-[11px] font-bold transition-all duration-150"
                   style={{
-                    background: playerColor === c ? `${accent.value}20` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${playerColor === c ? accent.value + '60' : 'rgba(255,255,255,0.06)'}`,
-                    color: playerColor === c ? accent.value : 'rgba(255,255,255,0.5)',
-                    boxShadow: playerColor === c ? `0 0 12px ${accent.glow}` : 'none',
+                    background: aiDepth === d.depth ? `${accent.value}20` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${aiDepth === d.depth ? accent.value + '60' : 'rgba(255,255,255,0.06)'}`,
+                    color: aiDepth === d.depth ? 'white' : 'rgba(255,255,255,0.4)',
+                    boxShadow: aiDepth === d.depth ? `0 0 10px ${accent.glow}` : 'none',
                   }}>
-                  {c === 'white' ? '○ White' : '● Black'}
+                  {d.label}
                 </button>
               ))}
             </div>
@@ -372,7 +380,7 @@ export default function MenuPage({
         <div className="space-y-3 mb-6">
           {mode === 'battle' ? (
             <button
-              onClick={() => onStart({ mode, playerMode: 'online', playerColor, playerName, autoMatchmaking: true })}
+              onClick={() => onStart({ mode, playerMode: 'online', playerColor, playerName, autoMatchmaking: true, aiDepth })}
               className="group relative w-full py-6 rounded-2xl text-lg font-black tracking-[0.2em] uppercase transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] overflow-hidden shadow-[0_0_50px_rgba(59,130,246,0.4)]"
               style={{
                 background: `linear-gradient(135deg, #3b82f6, #1d4ed8)`,
@@ -390,7 +398,7 @@ export default function MenuPage({
           ) : (
             <>
               <button
-                onClick={() => onStart({ mode, playerMode: 'ai', playerColor, playerName })}
+                onClick={() => onStart({ mode, playerMode: 'ai', playerColor, playerName, aiDepth })}
                 className="w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: `linear-gradient(135deg, ${accent.value}, ${accent.value}cc)`,
@@ -400,7 +408,7 @@ export default function MenuPage({
                 ▶ Play vs AI
               </button>
               <button
-                onClick={() => onStart({ mode, playerMode: 'local', playerColor, playerName })}
+                onClick={() => onStart({ mode, playerMode: 'local', playerColor, playerName, aiDepth })}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
@@ -410,7 +418,7 @@ export default function MenuPage({
                 👥 Local 2 Player
               </button>
               <button
-                onClick={() => onStart({ mode, playerMode: 'online', playerColor, playerName })}
+                onClick={() => onStart({ mode, playerMode: 'online', playerColor, playerName, aiDepth })}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: 'rgba(59,130,246,0.1)',

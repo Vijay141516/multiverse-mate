@@ -20,6 +20,7 @@ interface GamePageProps {
   pieceStyle: PieceStyle;
   classicGlowEnabled: boolean;
   onBack: () => void;
+  aiDepth?: number;
 }
 
 const RANK_AURA: Record<string, string> = {
@@ -42,14 +43,15 @@ function algebraicToMove(alg?: string): { from: Position; to: Position } | null 
   };
 }
 
-export default function GamePage({ mode, playerMode, playerColor, playerName, boardTheme, animationsEnabled, pieceStyle, classicGlowEnabled, onBack }: GamePageProps) {
+export default function GamePage(props: GamePageProps) {
+  const { mode, playerMode, playerColor, playerName, boardTheme, animationsEnabled, pieceStyle, classicGlowEnabled, onBack } = props;
   const {
     gameState, selectedPos, legalMoves, lastMove, isAiThinking, captureEffect,
     materialScore, whiteRank, blackRank, handleSquareClick, resetGame,
     resignGame, whiteTime, blackTime, isResigned, resignedColor, clearCaptureEffect,
     premove, premovesEnabled, togglePremoves, viewIndex, goToMove,
     analysis, runAnalysis, isAnalyzing, analysisProgress,
-  } = useChessGame({ mode, playerMode, playerColor });
+  } = useChessGame({ mode, playerMode, playerColor, aiDepth: props.aiDepth });
 
   const [showSidebar, setShowSidebar] = useState(false);
 
