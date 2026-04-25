@@ -112,8 +112,8 @@ export default function OnlineLobbyPage({ onBack, playerName, animationsEnabled,
 
   const [gameOverDismissed, setGameOverDismissed] = useState(false);
 
-  /* ── Matchmaking Overlay (High Priority) ── */
-  if (isMatchmaking || (autoMatchmaking && status === 'idle')) {
+  /* ── Matchmaking Overlay (High Priority for Battle Mode) ── */
+  if (isMatchmaking || (autoMatchmaking && status !== 'playing' && status !== 'error')) {
     return (
       <div className="h-[100dvh] w-full flex flex-col items-center justify-center p-6 overflow-hidden" style={{ background: '#0B0F1A' }}>
         <motion.div
