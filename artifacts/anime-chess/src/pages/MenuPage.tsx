@@ -714,6 +714,8 @@ export default function MenuPage({
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
       {/* ── AI Difficulty Modal ── */}
       <AnimatePresence>
         {showAiModal && (
