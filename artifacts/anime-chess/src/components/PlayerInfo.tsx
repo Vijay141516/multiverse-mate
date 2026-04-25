@@ -12,6 +12,7 @@ interface PlayerInfoProps {
   isCheck: boolean;
   isAiThinking?: boolean;
   timeLeft?: number;
+  avatarId?: number;
 }
 
 const PIECE_SYMBOLS: Record<PieceType, string> = {
@@ -31,7 +32,7 @@ function groupCaptured(pieces: Piece[]): Partial<Record<PieceType, number>> {
 }
 
 export default function PlayerInfo({
-  color, name, rank, score, captured, isCurrentTurn, isCheck, isAiThinking, timeLeft
+  color, name, rank, score, captured, isCurrentTurn, isCheck, isAiThinking, timeLeft, avatarId
 }: PlayerInfoProps) {
   const groups = groupCaptured(captured);
   const capturedColor: Color = color === 'white' ? 'black' : 'white';
@@ -47,31 +48,34 @@ export default function PlayerInfo({
     : { color: '#9b59b6', textShadow: '0 0 4px rgba(168,85,247,0.4)' };
 
   return (
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-300 ${
+    <div className={`flex items-center gap-2 md:gap-3 px-2 md:px-3 py-1 md:py-2 rounded-lg transition-all duration-300 ${
       isCurrentTurn ? 'bg-white/10 border border-white/20' : 'bg-transparent border border-transparent'
     }`} style={{
       boxShadow: isCurrentTurn ? `0 0 20px ${color === 'white' ? 'rgba(255,255,255,0.05)' : 'rgba(168,85,247,0.05)'}` : 'none'
     }}>
       {/* Timer Display */}
       {timeLeft !== undefined && (
-        <div className={`text-center min-w-[50px] font-mono font-bold py-1 px-2 rounded border transition-all ${
+        <div className={`text-center min-w-[40px] md:min-w-[50px] font-mono font-bold py-0.5 md:py-1 px-1 md:px-2 rounded border transition-all ${
           isCurrentTurn ? 'border-white/20 bg-white/5 text-white' : 'border-white/5 text-white/20'
         }`} style={{
           boxShadow: isCurrentTurn ? '0 0 10px rgba(255,255,255,0.1)' : 'none',
           animation: isCurrentTurn && timeLeft < 30 ? 'pulse 1s infinite' : 'none'
         }}>
-          <div className="text-[8px] uppercase opacity-40 leading-none mb-0.5">Time</div>
-          <div className="text-xs">{formatTime(timeLeft)}</div>
+          <div className="text-[7px] md:text-[8px] uppercase opacity-40 leading-none mb-0.5">Time</div>
+          <div className="text-[10px] md:text-xs">{formatTime(timeLeft)}</div>
         </div>
       )}
 
-      <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-black transition-all ${
+      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[10px] md:text-xs font-black transition-all ${
         color === 'white'
           ? 'bg-slate-100 text-slate-800'
           : 'bg-slate-800 text-white border border-purple-500/40'
       } ${isCurrentTurn ? 'ring-2 ring-green-400/70 ring-offset-1 ring-offset-transparent' : ''}`}>
-
-        {name.charAt(0).toUpperCase()}
+        {avatarId ? (
+          <img src={`https://placewaifu.com/image/${avatarId}`} alt={name} className="w-full h-full object-cover" />
+        ) : (
+          name.charAt(0).toUpperCase()
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -104,7 +108,7 @@ export default function PlayerInfo({
             ));
           })}
           {captured.length === 0 && (
-            <span className="text-[10px] text-white/15">no captures yet</span>
+            <span className="text-[10px] text-white/15 hidden md:inline">no captures yet</span>
           )}
         </div>
       </div>

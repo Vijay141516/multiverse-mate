@@ -11,8 +11,13 @@ import {
   getAllLegalMoves,
   getMaterialScore,
   getDominanceRank,
+  getGameStateAtMove,
+  analyzeGame,
+  FullAnalysis,
 } from '../lib/chess';
 import { getBestMove } from '../lib/ai';
+import { sounds } from '../lib/sounds';
+import { runFullAnalysis } from '../lib/analysis';
 
 export type GameMode = 'classic' | 'battle';
 export type PlayerMode = 'ai' | 'local' | 'online';
@@ -44,6 +49,12 @@ export interface GameHookState {
   premove: Move | null;
   premovesEnabled: boolean;
   togglePremoves: () => void;
+  viewIndex: number | null;
+  goToMove: (idx: number | null) => void;
+  analysis: FullAnalysis | null;
+  isAnalyzing: boolean;
+  analysisProgress: number;
+  runAnalysis: () => void;
 }
 
 const DEFAULT_CONFIG: GameConfig = {
@@ -55,7 +66,26 @@ const DEFAULT_CONFIG: GameConfig = {
 
 export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
   const config = { ...DEFAULT_CONFIG, ...initialConfig };
-  const [gameState, setGameState] = useState<GameState>(createInitialGameState());
+  const [realGameState, setRealGameState] = useState<GameState>(createInitialGameState());
+  const [viewIndex, setViewIndex] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<FullAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+
+  const runAnalysis = useCallback(async () => {
+    if (isAnalyzing) return;
+    setIsAnalyzing(true);
+    setAnalysisProgress(0);
+    try {
+      const result = await runFullAnalysis(realGameState.moveHistory, (p) => setAnalysisProgress(p));
+      setAnalysis(result);
+      setViewIndex(0);
+    } catch (e) {
+      console.error('Analysis failed', e);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [realGameState.moveHistory, isAnalyzing]);
   const [selectedPos, setSelectedPos] = useState<Position | null>(null);
   const [legalMoves, setLegalMoves] = useState<Position[]>([]);
   const [lastMove, setLastMove] = useState<Move | null>(null);
@@ -69,6 +99,29 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
   const [premovesEnabled, setPremovesEnabled] = useState(() => localStorage.getItem('anime_chess_premoves') === 'true');
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const gameState = viewIndex !== null 
+    ? getGameStateAtMove(realGameState.moveHistory, viewIndex + 1)
+    : realGameState;
+
+  const goToMove = useCallback((idx: number | null) => {
+    // Only go to live (null) if explicitly requested or if index is out of bounds
+    if (idx !== null && idx >= realGameState.moveHistory.length) {
+      setViewIndex(null);
+    } else {
+      setViewIndex(idx);
+    }
+    setSelectedPos(null);
+    setLegalMoves([]);
+  }, [realGameState.moveHistory.length]);
+
+  const setGameState = useCallback((next: GameState | ((prev: GameState) => GameState)) => {
+    setRealGameState(prev => {
+      const nextState = typeof next === 'function' ? next(prev) : next;
+      return nextState;
+    });
+    setViewIndex(null);
+  }, []);
+
   const togglePremoves = useCallback(() => {
     setPremovesEnabled(p => {
       const next = !p;
@@ -81,7 +134,7 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
 
   // Timer Effect
   useEffect(() => {
-    if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned || captureEffect) return;
+    if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned || captureEffect || viewIndex !== null) return;
     
     const interval = setInterval(() => {
       if (gameState.currentTurn === 'white') {
@@ -121,7 +174,7 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
   }, []);
 
   const handleSquareClick = useCallback((pos: Position) => {
-    if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned || captureEffect) return;
+    if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned || captureEffect || viewIndex !== null) return;
 
     const piece = gameState.board[pos.row][pos.col];
     const isMyTurn = gameState.currentTurn === config.playerColor || config.playerMode === 'local';
@@ -182,8 +235,14 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
         const newState = executeMove(gameState, move);
 
         if (captured && attacker && captured.color !== attacker.color) {
+          sounds.playCapture();
           triggerCaptureEffect(finalTo, attacker.type, attacker.color, captured.type, captured.color);
+        } else {
+          sounds.playMove();
         }
+
+        if (newState.isCheckmate) sounds.playGameOver();
+        else if (newState.isCheck) sounds.playCheck();
 
         setGameState(newState);
         setLastMove(move);
@@ -229,8 +288,14 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
     const attacker = gameState.board[from.row][from.col];
     const newState = executeMove(gameState, move);
     if (captured && attacker && captured.color !== attacker.color) {
+      sounds.playCapture();
       triggerCaptureEffect(finalTo, attacker.type, attacker.color, captured.type, captured.color);
+    } else {
+      sounds.playMove();
     }
+    if (newState.isCheckmate) sounds.playGameOver();
+    else if (newState.isCheck) sounds.playCheck();
+
     setGameState(newState);
     setLastMove(move);
     setSelectedPos(null);
@@ -244,7 +309,8 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
       gameState.isCheckmate ||
       gameState.isStalemate ||
       gameState.isDraw ||
-      captureEffect
+      captureEffect ||
+      viewIndex !== null // Disable AI while browsing history
     ) return;
 
     setIsAiThinking(true);
@@ -257,8 +323,16 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
         const attacker = gameState.board[best.from.row][best.from.col];
         const newState = executeMove(gameState, move);
         if (captured && attacker) {
+          if (captured.color !== attacker.color) sounds.playCapture();
+          else sounds.playMove();
           triggerCaptureEffect(best.to, attacker.type, attacker.color, captured.type, captured.color);
+        } else {
+          sounds.playMove();
         }
+
+        if (newState.isCheckmate) sounds.playGameOver();
+        else if (newState.isCheck) sounds.playCheck();
+
         setGameState(newState);
         setLastMove(move);
       }
@@ -339,5 +413,11 @@ export function useChessGame(initialConfig: Partial<GameConfig> = {}) {
     premove,
     premovesEnabled,
     togglePremoves,
+    viewIndex,
+    goToMove,
+    analysis,
+    runAnalysis,
+    isAnalyzing,
+    analysisProgress
   };
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { PieceType, Color } from '../lib/chess';
+import { sounds } from '../lib/sounds';
 
 interface AbilityEffectProps {
   attackerType: PieceType;
@@ -551,8 +552,13 @@ export default function AbilityEffect({
   onDoneRef.current = onDone;
 
   useEffect(() => {
+    sounds.playSpecial();
+    const impact = setTimeout(() => sounds.playImpact(), dur * 0.45);
     const t = setTimeout(() => onDoneRef.current(), dur + 200);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(impact);
+      clearTimeout(t);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount — dur is fixed per attackerType
 

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Board as BoardType, Position, Move, Color, PieceType } from '../lib/chess';
-import ChessPiece from './ChessPiece';
+import ChessPiece, { PieceStyle } from './ChessPiece';
 
 export type BoardTheme = 'anime' | 'classic';
 
@@ -19,8 +19,10 @@ interface BoardProps {
   isCheck: boolean;
   currentTurn: Color;
   boardTheme?: BoardTheme;
+  pieceStyle?: PieceStyle;
   premove?: Move | null;
   playerColor?: Color;
+  classicGlowEnabled?: boolean;
 }
 
 function getKingPos(board: BoardType, color: Color): Position | null {
@@ -34,8 +36,9 @@ function getKingPos(board: BoardType, color: Color): Position | null {
 
 export default function Board({
   board, selectedPos, legalMoves, lastMove, onSquareClick, flipped = false,
-  isCheck, currentTurn, boardTheme = 'anime', premove, playerColor,
-}: BoardProps) {
+  isCheck, currentTurn, boardTheme = 'anime', pieceStyle = 'anime', premove, playerColor,
+  classicGlowEnabled, suggestion,
+}: BoardProps & { suggestion?: { from: Position; to: Position } | null }) {
   const theme = THEMES[boardTheme];
 
   // ── Drag state ──
@@ -94,14 +97,17 @@ export default function Board({
 
       const isSelected  = selectedPos?.row === boardRow && selectedPos?.col === boardCol;
       const isLegal     = legalMoves.some(m => m.row === boardRow && m.col === boardCol);
-      const isLastMove  = (lastMove?.from.row === boardRow && lastMove?.from.col === boardCol) ||
-                          (lastMove?.to.row   === boardRow && lastMove?.to.col   === boardCol);
-      const isCheckSq   = checkKingPos?.row === boardRow && checkKingPos?.col === boardCol;
       const isDragOver  = dragOver?.row === boardRow && dragOver?.col === boardCol;
       const isDragSrc   = dragFrom?.row === boardRow && dragFrom?.col === boardCol;
-
       const isPremove   = (premove?.from.row === boardRow && premove?.from.col === boardCol) ||
                           (premove?.to.row   === boardRow && premove?.to.col   === boardCol);
+      
+      const isLastMove  = (lastMove?.from.row === boardRow && lastMove?.from.col === boardCol) ||
+                          (lastMove?.to.row   === boardRow && lastMove?.to.col   === boardCol);
+      const isCheckSq = isCheck && checkKingPos?.row === boardRow && checkKingPos?.col === boardCol;
+      const isLanding = lastMove?.to.row === boardRow && lastMove?.to.col === boardCol;
+      const isSuggestedFrom = suggestion?.from.row === boardRow && suggestion?.from.col === boardCol;
+      const isSuggestedTo = suggestion?.to.row === boardRow && suggestion?.to.col === boardCol;
 
       let bg = isLight ? theme.light : theme.dark;
       if (isSelected)    bg = 'rgba(72,200,110,0.45)';
@@ -132,6 +138,26 @@ export default function Board({
             outline: isDragOver && isLegal ? '2px solid rgba(90,220,110,0.9)' : 'none',
           }}
         >
+          {isSuggestedTo && (
+            <div className="absolute inset-0 border-[3px] border-blue-400/60 rounded-sm shadow-[inset_0_0_15px_rgba(96,165,250,0.5)] z-10 animate-pulse" />
+          )}
+          {isSuggestedFrom && (
+            <div className="absolute inset-0 border-[2px] border-blue-400/30 rounded-sm z-10" />
+          )}
+
+          {/* Landing Glow Effect */}
+          {isLanding && (pieceStyle === 'anime' || classicGlowEnabled) && (
+            <div 
+              key={`${lastMove.from.row}-${lastMove.from.col}-${lastMove.to.row}-${lastMove.to.col}`}
+              className="absolute inset-0 z-0 pointer-events-none"
+              style={{
+                background: lastMove.captured 
+                  ? 'radial-gradient(circle, rgba(239,68,68,0.7) 0%, transparent 75%)' 
+                  : 'radial-gradient(circle, rgba(59,130,246,0.6) 0%, transparent 75%)',
+                animation: 'landingGlow 0.8s cubic-bezier(0.2, 0, 0.2, 1) forwards',
+              }}
+            />
+          )}
           {/* Rank / file labels */}
           {displayCol === 0 && (
             <span style={{
@@ -191,6 +217,8 @@ export default function Board({
                 color={piece.color}
                 isSelected={isSelected}
                 isDragging={isDragSrc}
+                style={pieceStyle}
+                glowEnabled={classicGlowEnabled}
               />
             </div>
           )}        </div>
@@ -208,7 +236,7 @@ export default function Board({
         width: '100%', aspectRatio: '1',
         borderRadius: '8px',
         overflow: 'visible',
-        boxShadow: '0 0 60px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,255,255,0.06)',
+        boxShadow: '0 0 60px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,255,255,0.06), inset 0 0 30px rgba(255,255,255,0.05)',
       }}
     >
       {cells}
@@ -234,6 +262,8 @@ export default function Board({
                 type={piece.type}
                 color={piece.color}
                 isSelected={false}
+                style={pieceStyle}
+                glowEnabled={classicGlowEnabled}
               />
             );
           })()}

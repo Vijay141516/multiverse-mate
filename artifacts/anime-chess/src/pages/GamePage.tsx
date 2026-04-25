@@ -4,9 +4,11 @@ import Board, { BoardTheme } from '../components/Board';
 import PlayerInfo from '../components/PlayerInfo';
 import MoveHistory from '../components/MoveHistory';
 import { useChessGame, GameMode, PlayerMode } from '../hooks/useChessGame';
-import { Color } from '../lib/chess';
+import { Color, Position } from '../lib/chess';
 import { ABILITY_DESCRIPTIONS, CHARACTER_NAMES } from '../lib/sprites';
 import AbilityEffect from '../components/AbilityEffect';
+import GameOverOverlay from '../components/GameOverOverlay';
+import { PieceStyle } from '../components/ChessPiece';
 
 interface GamePageProps {
   mode: GameMode;
@@ -14,6 +16,9 @@ interface GamePageProps {
   playerColor: Color;
   playerName: string;
   boardTheme: BoardTheme;
+  animationsEnabled: boolean;
+  pieceStyle: PieceStyle;
+  classicGlowEnabled: boolean;
   onBack: () => void;
 }
 
@@ -25,12 +30,25 @@ const RANK_AURA: Record<string, string> = {
   D: 'transparent',
 };
 
-export default function GamePage({ mode, playerMode, playerColor, playerName, boardTheme, onBack }: GamePageProps) {
+function algebraicToMove(alg?: string): { from: Position; to: Position } | null {
+  if (!alg || alg.length < 4) return null;
+  const fromFile = alg.charCodeAt(0) - 97;
+  const fromRank = 8 - parseInt(alg[1]);
+  const toFile = alg.charCodeAt(2) - 97;
+  const toRank = 8 - parseInt(alg[3]);
+  return {
+    from: { row: fromRank, col: fromFile },
+    to: { row: toRank, col: toFile }
+  };
+}
+
+export default function GamePage({ mode, playerMode, playerColor, playerName, boardTheme, animationsEnabled, pieceStyle, classicGlowEnabled, onBack }: GamePageProps) {
   const {
     gameState, selectedPos, legalMoves, lastMove, isAiThinking, captureEffect,
     materialScore, whiteRank, blackRank, handleSquareClick, resetGame,
     resignGame, whiteTime, blackTime, isResigned, resignedColor, clearCaptureEffect,
-    premove, premovesEnabled, togglePremoves
+    premove, premovesEnabled, togglePremoves, viewIndex, goToMove,
+    analysis, runAnalysis, isAnalyzing, analysisProgress,
   } = useChessGame({ mode, playerMode, playerColor });
 
   const [showSidebar, setShowSidebar] = useState(false);
@@ -39,27 +57,41 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
   const isFlipped = playerColor === 'black';
 
   const dominantColor = materialScore.advantage > 0 ? 'white' : materialScore.advantage < 0 ? 'black' : null;
-  const dominantRank  = dominantColor === 'white' ? whiteRank : blackRank;
-  const auraColor     = dominantColor ? RANK_AURA[dominantRank] : 'transparent';
+  const dominantRank = dominantColor === 'white' ? whiteRank : blackRank;
+  const auraColor = dominantColor ? RANK_AURA[dominantRank] : 'transparent';
 
-  const topColor: Color    = isFlipped ? playerColor : aiColor;
+  const localAvatarId = parseInt(localStorage.getItem('anime_chess_avatar_id') || '1');
+  const botAvatarId = 99; // A mechanical or generic bot-like waifu for the AI
+
+  const topColor: Color = isFlipped ? playerColor : aiColor;
   const bottomColor: Color = isFlipped ? aiColor : playerColor;
 
   const topName = playerMode === 'local' ? 'Player 2' : (playerMode === 'online' ? 'Opponent' : 'AI Bot');
   const bottomName = playerMode === 'local' ? 'Player 1' : playerName;
 
-  const getRank     = (c: Color) => c === 'white' ? whiteRank : blackRank;
-  const getScore    = (c: Color) => c === 'white' ? materialScore.white : materialScore.black;
-  const getCaptured = (c: Color) => c === 'white' ? gameState.capturedByWhite : gameState.capturedByBlack;
-  const getTime     = (c: Color) => c === 'white' ? whiteTime : blackTime;
+  const topAvatarId = playerMode === 'local' ? undefined : (playerMode === 'ai' ? (isFlipped ? localAvatarId : botAvatarId) : undefined);
+  const bottomAvatarId = playerMode === 'local' ? undefined : (playerMode === 'ai' ? (isFlipped ? botAvatarId : localAvatarId) : undefined);
 
-  const gameOver = gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned;
-  const winner   = gameState.isCheckmate
+  const getRank = (c: Color) => c === 'white' ? whiteRank : blackRank;
+  const getScore = (c: Color) => c === 'white' ? materialScore.white : materialScore.black;
+  const getCaptured = (c: Color) => c === 'white' ? gameState.capturedByWhite : gameState.capturedByBlack;
+  const getTime = (c: Color) => c === 'white' ? whiteTime : blackTime;
+
+  const [gameOverDismissed, setGameOverDismissed] = useState(false);
+
+  const gameOver = (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw || isResigned) && !gameOverDismissed;
+  const winner = gameState.isCheckmate
     ? (gameState.currentTurn === 'white' ? 'Black' : 'White')
     : isResigned ? (resignedColor === 'white' ? 'Black' : 'White')
-    : null;
-    
+      : null;
+
   const didIWin = winner?.toLowerCase() === playerColor.toLowerCase();
+
+  const handleAnalyze = () => {
+    runAnalysis();
+    setGameOverDismissed(true);
+    setShowSidebar(true);
+  };
 
   const SidebarContent = () => (
     <>
@@ -102,23 +134,14 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
       )}
 
       {!gameOver && (
-        <div className="px-3 py-3 border-b border-white/5 flex flex-col gap-2">
-           <button 
-             onClick={() => resignGame(playerColor)}
-             className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider text-red-400/80 border border-red-500/20 hover:bg-red-500/10 transition-colors"
-           >
-             🏳 Resign
-           </button>
-           <button 
-             onClick={togglePremoves}
-             className={`w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-colors border ${
-               premovesEnabled 
-                 ? 'text-green-400/80 border-green-500/20 hover:bg-green-500/10' 
-                 : 'text-white/40 border-white/10 hover:bg-white/5'
-             }`}
-           >
-             {premovesEnabled ? '⚡ Premoves: ON' : '⚡ Premoves: OFF'}
-           </button>
+        <div className="px-4 py-4 border-b border-white/5">
+          <button
+            onClick={() => resignGame(playerColor)}
+            className="w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.3em] text-red-400/80 bg-white/[0.03] backdrop-blur-xl border border-white/10 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-400 transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex items-center justify-center gap-3 group"
+          >
+            <span className="text-base group-hover:rotate-12 transition-transform duration-300">🏳</span>
+            RESIGN GAME
+          </button>
         </div>
       )}
 
@@ -133,7 +156,7 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
                   style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${a.color}20` }}>
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold" style={{ color: a.color }}>
-                      {CHARACTER_NAMES[type]}
+                      {pieceStyle === 'classic' ? type.toUpperCase() : CHARACTER_NAMES[type]}
                     </span>
                     <span className="text-[9px] text-white/25 uppercase">{type}</span>
                   </div>
@@ -148,7 +171,14 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
       )}
 
       <div className="flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-        <MoveHistory moves={gameState.moveHistory} />
+        <MoveHistory
+          moves={gameState.moveHistory}
+          viewIndex={viewIndex}
+          onMoveClick={goToMove}
+          analysis={analysis}
+          isAnalyzing={isAnalyzing}
+          analysisProgress={analysisProgress}
+        />
       </div>
 
       <div className="px-4 py-3 border-t border-white/5 flex-shrink-0">
@@ -217,6 +247,7 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
         {/* Rank aura bg */}
         <div className="absolute inset-0 pointer-events-none transition-all duration-700"
           style={{
+            transform: 'translate3d(0,0,0)',
             background: dominantColor
               ? `radial-gradient(ellipse at ${dominantColor === 'white' ? 'bottom' : 'top'} center, ${auraColor} 0%, transparent 65%)`
               : 'transparent',
@@ -224,7 +255,7 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
         />
 
         {/* Opponent info */}
-        <div className="relative z-10 flex-shrink-0 px-2 pt-2 pb-1 md:px-3 md:pt-3">
+        <div className="relative z-10 flex-shrink-0 px-3 pt-2 md:pt-3">
           <PlayerInfo
             color={topColor}
             name={topName}
@@ -235,17 +266,13 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
             isCurrentTurn={gameState.currentTurn === topColor}
             isCheck={gameState.isCheck && gameState.currentTurn === topColor}
             isAiThinking={isAiThinking && playerMode === 'ai' && topColor === aiColor}
+            avatarId={topAvatarId}
           />
         </div>
 
-        {/* Board — on mobile fills width (no flex-1), on desktop centers in remaining space */}
-        <div className="relative z-10 md:flex-1 flex justify-center px-2 py-1 md:px-3 md:items-center" style={{ minHeight: 0 }}>
-          <div style={{
-            width: '100%',
-            maxWidth: 'min(calc(100dvh - 185px), calc(100dvw - 16px))',
-            aspectRatio: '1',
-            pointerEvents: captureEffect ? 'none' : 'auto',
-          }}>
+        {/* Board Area */}
+        <div className="relative z-10 flex-1 flex items-center justify-center p-2 md:p-6" style={{ minHeight: 0 }}>
+          <div className="w-full max-w-[min(92vw,75dvh)] aspect-square transition-transform duration-300">
             <Board
               board={gameState.board}
               selectedPos={selectedPos}
@@ -258,6 +285,9 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
               currentTurn={gameState.currentTurn}
               boardTheme={boardTheme}
               playerColor={playerColor}
+              pieceStyle={pieceStyle}
+              classicGlowEnabled={classicGlowEnabled}
+              suggestion={viewIndex !== null ? algebraicToMove(analysis?.moves[viewIndex]?.bestMove) : null}
             />
           </div>
         </div>
@@ -266,15 +296,50 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
         <div className="relative z-10 flex-shrink-0 px-2 pt-1 pb-2 md:px-3 md:pb-3">
           <PlayerInfo
             color={bottomColor}
-            name={bottomName}
+            name={bottomColor === 'white' ? 'White' : 'Black'}
             rank={getRank(bottomColor)}
             score={getScore(bottomColor)}
             captured={getCaptured(bottomColor)}
             timeLeft={getTime(bottomColor)}
             isCurrentTurn={gameState.currentTurn === bottomColor}
             isCheck={gameState.isCheck && gameState.currentTurn === bottomColor}
+            avatarId={bottomAvatarId}
           />
         </div>
+
+        {/* ── Mobile Navigation Controls ── */}
+        {gameState.moveHistory.length > 0 && (
+          <div className="md:hidden flex justify-center gap-1 pb-4 px-4 z-10">
+            <button 
+              onClick={() => goToMove(0)}
+              disabled={viewIndex === 0}
+              className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 disabled:opacity-20 transition-all active:scale-95"
+            >
+              «
+            </button>
+            <button 
+              onClick={() => goToMove((viewIndex ?? gameState.moveHistory.length) - 1)}
+              disabled={(viewIndex ?? gameState.moveHistory.length) === 0}
+              className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 disabled:opacity-20 transition-all active:scale-95"
+            >
+              ‹
+            </button>
+            <button 
+              onClick={() => goToMove((viewIndex ?? -1) + 1)}
+              disabled={viewIndex === null || viewIndex >= gameState.moveHistory.length - 1}
+              className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 disabled:opacity-20 transition-all active:scale-95"
+            >
+              ›
+            </button>
+            <button 
+              onClick={() => goToMove(null)}
+              disabled={viewIndex === null}
+              className="flex-1 py-2 rounded-lg bg-white/5 border border-white/10 text-white/40 disabled:opacity-20 transition-all active:scale-95"
+            >
+              »
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── DESKTOP SIDEBAR ── */}
@@ -326,7 +391,7 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
       )}
 
       {/* ── KILL ANIMATION ── */}
-      {captureEffect && (
+      {animationsEnabled && captureEffect && (
         <AbilityEffect
           attackerType={captureEffect.attackerType}
           attackerColor={captureEffect.attackerColor}
@@ -335,86 +400,27 @@ export default function GamePage({ mode, playerMode, playerColor, playerName, bo
           onDone={clearCaptureEffect}
         />
       )}
+      {!animationsEnabled && captureEffect && (() => { clearCaptureEffect(); return null; })()}
 
-      {/* GAME OVER ANIMATIONS */}
-      <AnimatePresence>
-        {gameOver && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
-            style={{ 
-              background: didIWin 
-                ? 'radial-gradient(circle, rgba(0,0,0,0.9) 0%, rgba(10,10,30,0.98) 100%)'
-                : 'radial-gradient(circle, rgba(0,0,0,0.85) 0%, rgba(20,0,0,0.98) 100%)', 
-              backdropFilter: 'blur(12px)' 
-            }}
-          >
-            {/* Dramatic Slash Effect */}
-            <motion.div 
-              initial={{ scale: 0, opacity: 0, rotate: -15, x: '-100%' }}
-              animate={{ scale: 2, opacity: 0.15, rotate: -15, x: '0%' }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className={`absolute inset-0 ${didIWin ? 'bg-blue-500' : 'bg-red-500'} pointer-events-none`}
-              style={{ clipPath: 'polygon(0 48%, 100% 40%, 100% 60%, 0 52%)' }}
-            />
-            
-            <div className="text-center relative z-10 w-full">
-              {/* Background Japanese Text */}
-              <motion.div
-                initial={{ scale: 1.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 0.08 }}
-                transition={{ duration: 0.4 }}
-                className={`absolute inset-0 flex items-center justify-center text-[10rem] md:text-[16rem] font-black ${didIWin ? 'text-blue-500' : 'text-red-500'} tracking-tighter pointer-events-none`}
-                style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', whiteSpace: 'nowrap', zIndex: -1 }}
-              >
-                {isResigned ? '降参' : 'チェックメイト'}
-              </motion.div>
-              
-              <motion.h1 
-                initial={{ x: -100, opacity: 0, skewX: -20 }}
-                animate={{ x: 0, opacity: 1, skewX: -10 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 120 }}
-                className={`text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-r ${didIWin ? 'from-blue-600 via-white to-blue-600 drop-shadow-[0_0_35px_rgba(0,100,255,0.8)]' : 'from-red-600 via-white to-red-600 drop-shadow-[0_0_35px_rgba(255,0,0,0.8)]'} uppercase italic`}
-              >
-                {isResigned ? 'RESIGNED' : 'CHECKMATE'}
-              </motion.h1>
-              
-              <motion.p
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4, type: 'spring' }}
-                className="text-white text-3xl md:text-5xl mt-4 font-bold tracking-[0.3em] drop-shadow-[0_0_15px_rgba(255,255,255,0.9)] uppercase"
-              >
-                {didIWin ? 'YOU WIN' : `${winner} WINS`}
-              </motion.p>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ delay: 1.2 }}
-                className="mt-12 flex flex-col md:flex-row justify-center items-center gap-4 pointer-events-auto"
-              >
-                <button
-                  onClick={resetGame}
-                  className={`px-8 py-3 rounded-none ${didIWin ? 'bg-blue-600 border-blue-500 shadow-[0_0_20px_rgba(0,100,255,0.5)]' : 'bg-red-600 border-red-500 shadow-[0_0_20px_rgba(255,0,0,0.5)]'} text-white font-black uppercase tracking-widest text-lg border-2 hover:opacity-90 hover:scale-105 transition-all`}
-                  style={{ transform: 'skewX(-10deg)' }}
-                >
-                  <span className="block" style={{ transform: 'skewX(10deg)' }}>Play Again</span>
-                </button>
-                <button
-                  onClick={onBack}
-                  className="px-8 py-3 rounded-none bg-transparent text-white/70 font-bold uppercase tracking-widest text-sm border-2 border-white/20 hover:text-white hover:border-white/50 transition-all"
-                  style={{ transform: 'skewX(-10deg)' }}
-                >
-                  <span className="block" style={{ transform: 'skewX(10deg)' }}>Main Menu</span>
-                </button>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* GAME OVER OVERLAY */}
+      <GameOverOverlay
+        isOpen={gameOver}
+        winner={winner}
+        didIWin={didIWin}
+        isCheckmate={gameState.isCheckmate}
+        isResigned={isResigned}
+        isStalemate={gameState.isStalemate}
+        isDraw={gameState.isDraw}
+        animationsEnabled={animationsEnabled}
+        onRematch={() => { setGameOverDismissed(false); resetGame(); }}
+        onReview={() => setGameOverDismissed(true)}
+        onExit={onBack}
+        isAnalyzing={isAnalyzing}
+        analysisProgress={analysisProgress}
+        hasAnalysis={!!analysis}
+        onAnalyze={handleAnalyze}
+        modeLabel="Multiverse Mate"
+      />
     </div>
   );
 }

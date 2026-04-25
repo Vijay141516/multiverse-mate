@@ -75,6 +75,50 @@ export function createInitialBoard(): Board {
   return board;
 }
 
+export function generateFEN(state: GameState): string {
+  let fen = '';
+  
+  // 1. Board
+  for (let r = 0; r < 8; r++) {
+    let empty = 0;
+    for (let c = 0; c < 8; c++) {
+      const p = state.board[r][c];
+      if (p) {
+        if (empty > 0) { fen += empty; empty = 0; }
+        const char = p.type === 'knight' ? 'n' : p.type[0];
+        fen += p.color === 'white' ? char.toUpperCase() : char;
+      } else {
+        empty++;
+      }
+    }
+    if (empty > 0) fen += empty;
+    if (r < 7) fen += '/';
+  }
+
+  // 2. Turn
+  fen += ` ${state.currentTurn === 'white' ? 'w' : 'b'}`;
+
+  // 3. Castling
+  let castling = '';
+  if (state.castlingRights.whiteKingSide) castling += 'K';
+  if (state.castlingRights.whiteQueenSide) castling += 'Q';
+  if (state.castlingRights.blackKingSide) castling += 'k';
+  if (state.castlingRights.blackQueenSide) castling += 'q';
+  fen += ` ${castling || '-'}`;
+
+  // 4. En Passant
+  if (state.enPassantTarget) {
+    fen += ` ${posToAlgebraic(state.enPassantTarget)}`;
+  } else {
+    fen += ' -';
+  }
+
+  // 5. Clocks
+  fen += ` ${state.halfMoveClock} ${state.fullMoveNumber}`;
+
+  return fen;
+}
+
 export function createInitialGameState(): GameState {
   const board = createInitialBoard();
   return {
@@ -240,6 +284,15 @@ export function isSquareAttacked(board: Board, pos: Position, byColor: Color): b
     for (let c = 0; c < 8; c++) {
       const piece = board[r][c];
       if (!piece || piece.color !== byColor) continue;
+
+      if (piece.type === 'pawn') {
+        const dir = piece.color === 'white' ? -1 : 1;
+        if (pos.row === r + dir && (pos.col === c - 1 || pos.col === c + 1)) {
+          return true;
+        }
+        continue;
+      }
+
       const rawMoves = getRawMoves(board, { row: r, col: c }, null, {
         whiteKingSide: false, whiteQueenSide: false,
         blackKingSide: false, blackQueenSide: false,
@@ -447,6 +500,53 @@ export function posToAlgebraic(pos: Position): string {
   return String.fromCharCode(97 + pos.col) + (8 - pos.row);
 }
 
+export function getGameStateAtMove(moves: Move[], limit: number): GameState {
+  let state = createInitialGameState();
+  const actualLimit = Math.min(limit, moves.length);
+  for (let i = 0; i < actualLimit; i++) {
+    state = executeMove(state, moves[i]);
+  }
+  return state;
+}
+
+export function evaluatePosition(state: GameState): number {
+  if (state.isCheckmate) return state.currentTurn === 'white' ? -1000 : 1000;
+  if (state.isDraw || state.isStalemate) return 0;
+
+  let score = 0;
+  const board = state.board;
+
+  // 1. Material & Position
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (!piece) continue;
+
+      const val = PIECE_VALUES[piece.type];
+      const colorMult = piece.color === 'white' ? 1 : -1;
+      
+      score += val * colorMult;
+
+      // Center Control (d4, e4, d5, e5 bonus)
+      if ((r >= 3 && r <= 4) && (c >= 3 && c <= 4)) {
+        score += 0.25 * colorMult;
+      }
+    }
+  }
+
+  // 2. Mobility (Number of legal moves)
+  const whiteMoves = getAllLegalMoves(state, 'white').length;
+  const blackMoves = getAllLegalMoves(state, 'black').length;
+  score += (whiteMoves - blackMoves) * 0.05;
+
+  // 3. King Safety (Simple: check penalty)
+  if (state.isCheck) {
+    score += state.currentTurn === 'white' ? -0.5 : 0.5;
+  }
+
+  return score;
+}
+
 export function moveToNotation(move: Move, piece: Piece, captured: boolean, isCheck: boolean, isCheckmate: boolean): string {
   const file = String.fromCharCode(97 + move.to.col);
   const rank = 8 - move.to.row;
@@ -469,4 +569,103 @@ export function moveToNotation(move: Move, piece: Piece, captured: boolean, isCh
   else if (isCheck) notation += '+';
 
   return notation;
+}
+
+export type MoveQuality = 'best' | 'great' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | 'book';
+
+export interface MoveAnalysis {
+  quality: MoveQuality;
+  evalChange: number;
+  message: string;
+  bestMove?: string;
+}
+
+export interface FullAnalysis {
+  moves: MoveAnalysis[];
+  accuracy: { white: number; black: number };
+  counts: {
+    white: Record<MoveQuality, number>;
+    black: Record<MoveQuality, number>;
+  };
+}
+
+const QUALITY_WEIGHTS: Record<MoveQuality, number> = {
+  best: 100,
+  great: 90,
+  book: 100,
+  good: 75,
+  inaccuracy: 40,
+  mistake: 15,
+  blunder: 0
+};
+
+export function analyzeGame(moves: Move[]): FullAnalysis {
+  const analysis: MoveAnalysis[] = [];
+  const counts = {
+    white: { best: 0, great: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 },
+    black: { best: 0, great: 0, good: 0, book: 0, inaccuracy: 0, mistake: 0, blunder: 0 }
+  };
+  
+  let currentState = createInitialGameState();
+  let prevEval = 0; // Starting eval is 0
+
+  for (let i = 0; i < moves.length; i++) {
+    const move = moves[i];
+    const turn = currentState.currentTurn;
+    const nextState = executeMove(currentState, move);
+    
+    // Get sophisticated evaluation
+    const currentEval = evaluatePosition(nextState);
+
+    // Change in evaluation from the perspective of the player who just moved
+    // If White moves, gain = currentEval - prevEval
+    // If Black moves, gain = prevEval - currentEval
+    let diff = turn === 'white' ? (currentEval - prevEval) : (prevEval - currentEval);
+    
+    let quality: MoveQuality = 'good';
+    let message = 'Solid move';
+
+    // Logic for classifying moves (Tuned thresholds)
+    if (i < 8) { // Openings
+      quality = 'book';
+      message = 'Opening phase';
+    } else if (nextState.isCheckmate) { 
+      quality = 'best'; 
+      message = 'Checkmate delivered!'; 
+    } else if (diff >= 1.5) { 
+      quality = 'best'; 
+      message = 'Powerful move!'; 
+    } else if (diff >= 0.4) { 
+      quality = 'great'; 
+      message = 'Strong decision'; 
+    } else if (diff <= -2.0) { 
+      quality = 'blunder'; 
+      message = 'Major blunder'; 
+    } else if (diff <= -0.8) { 
+      quality = 'mistake'; 
+      message = 'Tough mistake'; 
+    } else if (diff <= -0.3) { 
+      quality = 'inaccuracy'; 
+      message = 'Inaccurate move'; 
+    }
+
+    analysis.push({ quality, evalChange: diff, message });
+    counts[turn][quality]++;
+
+    prevEval = currentEval;
+    currentState = nextState;
+  }
+
+  const calcAcc = (color: 'white' | 'black') => {
+    const playerMoves = analysis.filter((_, idx) => (idx % 2 === 0) === (color === 'white'));
+    if (playerMoves.length === 0) return 100;
+    const sum = playerMoves.reduce((acc, m) => acc + QUALITY_WEIGHTS[m.quality], 0);
+    return Math.min(100, Math.round(sum / playerMoves.length));
+  };
+
+  return {
+    moves: analysis,
+    accuracy: { white: calcAcc('white'), black: calcAcc('black') },
+    counts
+  };
 }
