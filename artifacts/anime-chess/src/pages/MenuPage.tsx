@@ -59,6 +59,7 @@ export default function MenuPage({
   const [showProfile, setShowProfile] = useState(false);
   const [premovesEnabled, setPremovesEnabled] = useState(() => localStorage.getItem('anime_chess_premoves') === 'true');
   const [aiDepth, setAiDepth] = useState(() => Number(localStorage.getItem('anime_chess_ai_depth') || '3'));
+  const [showAiModal, setShowAiModal] = useState(false);
 
   const handleTogglePremoves = () => {
     setPremovesEnabled(p => {
@@ -348,32 +349,6 @@ export default function MenuPage({
             )}
           </div>
 
-          {/* AI Difficulty */}
-          <div className="rounded-xl p-4 border"
-            style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.06)' }}>
-            <p className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">AI Difficulty</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'Novice', depth: 2 },
-                { label: 'Intermediate', depth: 3 },
-                { label: 'Grandmaster', depth: 4 }
-              ].map(d => (
-                <button key={d.depth} onClick={() => {
-                  setAiDepth(d.depth);
-                  localStorage.setItem('anime_chess_ai_depth', String(d.depth));
-                }}
-                  className="px-2 py-2 rounded-lg text-[11px] font-bold transition-all duration-150"
-                  style={{
-                    background: aiDepth === d.depth ? `${accent.value}20` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${aiDepth === d.depth ? accent.value + '60' : 'rgba(255,255,255,0.06)'}`,
-                    color: aiDepth === d.depth ? 'white' : 'rgba(255,255,255,0.4)',
-                    boxShadow: aiDepth === d.depth ? `0 0 10px ${accent.glow}` : 'none',
-                  }}>
-                  {d.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Play buttons */}
@@ -398,7 +373,7 @@ export default function MenuPage({
           ) : (
             <>
               <button
-                onClick={() => onStart({ mode, playerMode: 'ai', playerColor, playerName, aiDepth })}
+                onClick={() => setShowAiModal(true)}
                 className="w-full py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
                 style={{
                   background: `linear-gradient(135deg, ${accent.value}, ${accent.value}cc)`,
@@ -735,6 +710,73 @@ export default function MenuPage({
                     Save Profile
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      {/* ── AI Difficulty Modal ── */}
+      <AnimatePresence>
+        {showAiModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)' }}
+            onClick={() => setShowAiModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="w-full max-w-sm rounded-3xl border border-white/10 p-8 shadow-2xl"
+              style={{ background: 'rgba(15,20,35,0.95)', boxShadow: `0 0 60px ${accent.glow}30` }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight text-center">AI DIFFICULTY</h2>
+              <p className="text-[10px] text-white/40 font-bold tracking-[0.2em] mb-8 text-center uppercase">Choose your challenge level</p>
+              
+              <div className="space-y-3 mb-8">
+                {[
+                  { label: 'Novice', depth: 2, desc: 'Casual play, simple moves' },
+                  { label: 'Intermediate', depth: 3, desc: 'Standard logic, solid play' },
+                  { label: 'Grandmaster', depth: 4, desc: 'Deep foresight, very hard' }
+                ].map(d => (
+                  <button
+                    key={d.depth}
+                    onClick={() => {
+                      setAiDepth(d.depth);
+                      localStorage.setItem('anime_chess_ai_depth', String(d.depth));
+                      onStart({ mode, playerMode: 'ai', playerColor, playerName, aiDepth: d.depth });
+                      setShowAiModal(false);
+                    }}
+                    className="w-full p-4 rounded-2xl border transition-all duration-200 group text-left flex items-center justify-between"
+                    style={{
+                      background: aiDepth === d.depth ? `${accent.value}15` : 'rgba(255,255,255,0.03)',
+                      borderColor: aiDepth === d.depth ? accent.value : 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div>
+                      <div className="text-sm font-black uppercase tracking-wider mb-1" style={{ color: aiDepth === d.depth ? 'white' : 'rgba(255,255,255,0.6)' }}>
+                        {d.label}
+                      </div>
+                      <div className="text-[10px] text-white/30 font-medium">{d.desc}</div>
+                    </div>
+                    <div 
+                      className="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                      style={{ 
+                        borderColor: aiDepth === d.depth ? accent.value : 'rgba(255,255,255,0.1)',
+                        background: aiDepth === d.depth ? accent.value : 'transparent'
+                      }}
+                    >
+                      {aiDepth === d.depth && <div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_white]" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-[10px] text-white/40 leading-relaxed italic">
+                Note: Higher difficulty increases the AI's "Look-Ahead" depth. At Grandmaster, the AI calculates millions of possibilities 4 moves ahead, significantly increasing its strategic foresight.
               </div>
             </motion.div>
           </motion.div>
