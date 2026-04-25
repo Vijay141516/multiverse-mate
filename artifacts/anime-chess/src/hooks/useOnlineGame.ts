@@ -11,16 +11,60 @@ import { sounds } from '../lib/sounds';
 import { runFullAnalysis } from '../lib/analysis';
 
 /* ── The API server URL ── */
-/* ── The API server URL ── */
 const getApiUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl.endsWith('/api') ? `${envUrl}/chess` : `${envUrl}/api/chess`;
-  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
-    return 'https://multiverse-mate-api.onrender.com/api/chess';
+  const envUrl = import.meta.env.VITE_API_URL || '';
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  
+  let base = envUrl.trim();
+  
+  // If envUrl is missing OR pointing to the frontend by mistake, use the hardcoded backend
+  if (!base || (hostname && base.includes(hostname) && hostname !== 'localhost' && hostname !== '127.0.0.1')) {
+     if (hostname.includes('onrender.com')) {
+       base = 'https://multiverse-mate-api.onrender.com';
+     } else {
+       base = ''; // relative
+     }
   }
-  return '/api/chess';
+  
+  if (!base) return '/api/chess';
+  
+  if (base.endsWith('/')) base = base.slice(0, -1);
+  return base.endsWith('/api') ? `${base}/chess` : `${base}/api/chess`;
 };
+
 const API = getApiUrl();
+
+// Robust fetch helper to catch HTML-as-JSON errors
+async function apiFetch(endpoint: string, options?: RequestInit) {
+  const url = endpoint.startsWith('http') ? endpoint : `${API}${endpoint}`;
+  try {
+    const res = await fetch(url, options);
+    const text = await res.text();
+    
+    if (text.trim().startsWith('<')) {
+      console.error('API Error (HTML returned):', text.slice(0, 200));
+      throw new Error(`Server returned HTML instead of JSON. Ensure API URL is correct: ${API}`);
+    }
+    
+    if (!res.ok) {
+      let msg = `Server Error (${res.status})`;
+      try {
+        const errJson = JSON.parse(text);
+        msg = errJson.error || errJson.message || msg;
+      } catch {}
+      throw new Error(msg);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error('Invalid JSON response from server');
+    }
+  } catch (err: any) {
+    console.error('Fetch failed:', url, err);
+    throw err;
+  }
+}
 
 export type OnlineStatus =
   | 'idle'
@@ -59,7 +103,6 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
 
-  // Calculated game state must be defined early so hooks below can use it
   const gameState = viewIndex !== null 
     ? getGameStateAtMove(realGameState.moveHistory, viewIndex + 1)
     : realGameState;
@@ -74,7 +117,6 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const [rematchRequestedBy, setRematchRequestedBy] = useState<Color | null>(null);
 
   const appliedMovesRef = useRef(0);
-  // Important: Ref must point to realGameState for server sync logic
   const gameStateRef    = useRef<GameState>(realGameState);
   gameStateRef.current  = realGameState;
   
@@ -116,14 +158,12 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const submitMoveToServer = useCallback(async (from: Position, to: Position, index: number) => {
     if (!roomCode) return;
     try {
-      const res = await fetch(`${API}/rooms/${roomCode}/move`, {
+      await apiFetch(`/rooms/${roomCode}/move`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, from, to, moveIndex: index }),
       });
-      if (res.ok) {
-        pendingMoveRef.current = null;
-      }
+      pendingMoveRef.current = null;
     } catch {
       pendingMoveRef.current = { from, to, index };
     }
@@ -132,9 +172,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const poll = useCallback(async () => {
     if (!roomCode) return;
     try {
-      const res = await fetch(`${API}/rooms/${roomCode}`);
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await apiFetch(`/rooms/${roomCode}`);
 
       if (status === 'waiting' && data.hasOpponent) {
         setStatus('playing');
@@ -161,7 +199,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
          setPremove(null);
          appliedMovesRef.current = 0;
          pendingMoveRef.current = null;
-         fetch(`${API}/rooms/${roomCode}/clear-rematch-flag`, { method: 'POST' }).catch(() => {});
+         apiFetch(`/rooms/${roomCode}/clear-rematch-flag`, { method: 'POST' }).catch(() => {});
          return;
       }
 
@@ -190,19 +228,20 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
           submitMoveToServer(from, to, index);
         }
       }
-    } catch { /* ignore */ }
+    } catch (err: any) {
+       console.error('Polling error:', err);
+    }
   }, [roomCode, status, applyServerMove, submitMoveToServer]);
 
   useEffect(() => {
     if (!roomCode) return;
     clearPoll();
-    pollRef.current = setInterval(poll, 600);
+    pollRef.current = setInterval(poll, 800);
     return clearPoll;
   }, [roomCode, poll]);
 
   const handleSquareClick = useCallback((pos: Position) => {
     if (status !== 'playing' || viewIndex !== null) return;
-    // Note: We use current gameState for clicks
     if (gameState.isCheckmate || gameState.isStalemate || gameState.isDraw) return;
     
     const piece = gameState.board[pos.row][pos.col];
@@ -312,13 +351,11 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
     setStatus('creating');
     setError('');
     try {
-      const res = await fetch(`${API}/rooms`, {
+      const data = await apiFetch('/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, playerName, avatarId, timeLimit: selectedTime, avatarUrl }),
       });
-      if (!res.ok) throw new Error('Failed to create room');
-      const data = await res.json();
       setRoomCode(data.code);
       setPlayerColor(data.color);
       setTimeLimit(data.timeLimit);
@@ -335,16 +372,11 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
     setStatus('joining');
     setError('');
     try {
-      const res = await fetch(`${API}/rooms/${code}/join`, {
+      const data = await apiFetch(`/rooms/${code}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, playerName, avatarId, avatarUrl }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error ?? 'Failed to join');
-      }
-      const data = await res.json();
       setRoomCode(data.code);
       setPlayerColor(data.color);
       setTimeLimit(data.timeLimit);
@@ -362,13 +394,11 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
     setIsMatchmaking(true);
     setError('');
     try {
-      const res = await fetch(`${API}/matchmaking`, {
+      const data = await apiFetch('/matchmaking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, playerName, avatarId, avatarUrl }),
       });
-      if (!res.ok) throw new Error('Matchmaking failed');
-      const data = await res.json();
       setRoomCode(data.code);
       setPlayerColor(data.color);
       if (data.timeLimit) {
@@ -418,7 +448,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const resign = useCallback(async () => {
     if (!roomCode || status !== 'playing') return;
     try {
-      await fetch(`${API}/rooms/${roomCode}/resign`, {
+      await apiFetch(`/rooms/${roomCode}/resign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
@@ -429,7 +459,7 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
   const requestRematch = async () => {
     if (!roomCode) return;
     try {
-      await fetch(`${API}/rooms/${roomCode}/rematch`, {
+      await apiFetch(`/rooms/${roomCode}/rematch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId }),
