@@ -249,7 +249,7 @@ chessRouter.post('/rooms/:code/clear-rematch-flag', (req, res) => {
 
 /* POST /api/chess/matchmaking — random matchmaking */
 chessRouter.post('/matchmaking', (req, res) => {
-  const { playerId, playerName, avatarId } = req.body ?? {};
+  const { playerId, playerName, avatarId, avatarUrl } = req.body ?? {};
   
   if (waitingRoomCode) {
     const code = waitingRoomCode;
@@ -272,7 +272,7 @@ chessRouter.post('/matchmaking', (req, res) => {
       if (room.timeLimit !== null) room.turnStartTime = Date.now();
       
       waitingRoomCode = null;
-      res.json({ status: 'found', code, color: 'black' });
+      res.json({ status: 'found', code, color: 'black', timeLimit: room.timeLimit });
       return;
     }
   }
@@ -303,7 +303,7 @@ chessRouter.post('/matchmaking', (req, res) => {
   });
   
   waitingRoomCode = code;
-  res.json({ status: 'waiting', code, color: 'white' });
+  res.json({ status: 'waiting', code, color: 'white', timeLimit });
 });
 
 export default chessRouter;

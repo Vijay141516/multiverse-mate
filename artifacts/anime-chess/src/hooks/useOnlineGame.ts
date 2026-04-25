@@ -362,6 +362,12 @@ export function useOnlineGame(playerName: string = 'Player', avatarId: number = 
       const data = await res.json();
       setRoomCode(data.code);
       setPlayerColor(data.color);
+      if (data.timeLimit) {
+        setTimeLimit(data.timeLimit);
+        setWhiteTime(data.timeLimit);
+        setBlackTime(data.timeLimit);
+      }
+      
       if (data.status === 'found') {
         setStatus('playing');
         setIsMatchmaking(false);
