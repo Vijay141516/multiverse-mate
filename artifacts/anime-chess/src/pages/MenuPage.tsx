@@ -54,6 +54,7 @@ export default function MenuPage({
   const [selectedIndex, setSelectedIndex] = useState(4); // Default to Gojo
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('anime_chess_player_name') || initialName);
   const [avatarId, setAvatarId] = useState(() => parseInt(localStorage.getItem('anime_chess_avatar_id') || '1'));
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('anime_chess_avatar_custom_url') || '');
   const [showSettings, setShowSettings] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [premovesEnabled, setPremovesEnabled] = useState(() => localStorage.getItem('anime_chess_premoves') === 'true');
@@ -71,7 +72,30 @@ export default function MenuPage({
     localStorage.setItem('anime_chess_player_name', name);
   };
 
+  const handleUpdateAvatarUrl = (url: string) => {
+    setAvatarUrl(url);
+    if (url) {
+      localStorage.setItem('anime_chess_avatar_custom_url', url);
+    } else {
+      localStorage.removeItem('anime_chess_avatar_custom_url');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        handleUpdateAvatarUrl(base64);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const randomizeAvatar = () => {
+    setAvatarUrl('');
+    localStorage.removeItem('anime_chess_avatar_custom_url');
     const nextId = Math.floor(Math.random() * 150) + 1;
     setAvatarId(nextId);
     localStorage.setItem('anime_chess_avatar_id', String(nextId));
@@ -95,7 +119,7 @@ export default function MenuPage({
           <div className="relative">
             <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 group-hover:border-white/40 transition-colors shadow-[0_0_20px_rgba(0,0,0,0.5)]">
               <img 
-                src={`${AVATAR_BASE}${avatarId}`} 
+                src={avatarUrl || `${AVATAR_BASE}${avatarId}`} 
                 alt="Avatar" 
                 className="w-full h-full object-cover"
               />
@@ -237,7 +261,7 @@ export default function MenuPage({
               className="lg:hidden flex items-center justify-center w-11 h-11 rounded-full bg-white/[0.03] backdrop-blur-md border border-white/10 hover:bg-white/[0.07] transition-all relative"
             >
               <img 
-                src={`${AVATAR_BASE}${avatarId}`} 
+                src={avatarUrl || `${AVATAR_BASE}${avatarId}`} 
                 alt="Avatar" 
                 className="w-8 h-8 rounded-full object-cover"
               />
@@ -647,7 +671,7 @@ export default function MenuPage({
                 <div className="relative mb-6">
                   <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-white/10 shadow-2xl transform rotate-3 hover:rotate-0 transition-transform duration-500">
                     <img 
-                      src={`${AVATAR_BASE}${avatarId}`} 
+                      src={avatarUrl || `${AVATAR_BASE}${avatarId}`} 
                       alt="Profile" 
                       className="w-full h-full object-cover scale-110"
                     />
@@ -675,9 +699,24 @@ export default function MenuPage({
                       maxLength={14}
                       value={playerName}
                       onChange={(e) => handleUpdateName(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg font-bold focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all text-center"
+                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/5 transition-all text-center mb-4"
                       placeholder="Enter name..."
                     />
+
+                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] ml-1 mb-2 block">Custom Avatar URL</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={avatarUrl}
+                        onChange={(e) => handleUpdateAvatarUrl(e.target.value)}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-medium focus:outline-none focus:border-blue-500/30 transition-all"
+                        placeholder="https://image.url/..."
+                      />
+                      <label className="cursor-pointer px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase transition-all flex items-center justify-center">
+                        Upload
+                        <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      </label>
+                    </div>
                   </div>
 
                   <button
