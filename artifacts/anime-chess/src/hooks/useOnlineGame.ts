@@ -11,7 +11,16 @@ import { sounds } from '../lib/sounds';
 import { runFullAnalysis } from '../lib/analysis';
 
 /* ── The API server URL ── */
-const API = (import.meta.env.VITE_API_URL || '/api') + '/chess';
+/* ── The API server URL ── */
+const getApiUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) return envUrl.endsWith('/api') ? `${envUrl}/chess` : `${envUrl}/api/chess`;
+  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+    return 'https://multiverse-mate-api.onrender.com/api/chess';
+  }
+  return '/api/chess';
+};
+const API = getApiUrl();
 
 export type OnlineStatus =
   | 'idle'
