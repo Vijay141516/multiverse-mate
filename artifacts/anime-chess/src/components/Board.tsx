@@ -212,6 +212,7 @@ export default function Board({
           )}
 
           {/* Chess piece — draggable */}
+          {piece && (
             <div
               onPointerDown={e => handlePointerDown(e, pos)}
               onPointerMove={handlePointerMove}
@@ -235,7 +236,8 @@ export default function Board({
                 glowEnabled={classicGlowEnabled}
               />
             </div>
-          )}        </div>
+          )}
+        </div>
       );
     }
   }
