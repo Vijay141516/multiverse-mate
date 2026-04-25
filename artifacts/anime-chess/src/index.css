@@ -112,20 +112,20 @@
 
 /* Victim staggers and dissolves */
 @keyframes victimStagger {
-  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
-  15%  { transform: scale(1.3) rotate(-15deg) translateX(10px); opacity: 1; filter: brightness(2); }
-  40%  { transform: scale(0.9) rotate(10deg) translateX(-5px); opacity: 0.8; filter: brightness(1.2); }
-  65%  { transform: scale(0.6) rotate(-8deg) translateY(20%); opacity: 0.5; }
-  100% { transform: scale(0.1) rotate(45deg) translateY(60%); opacity: 0; }
+  0%   { transform: translate3d(0,0,0) scale(1) rotate(0deg); opacity: 1; }
+  15%  { transform: translate3d(10px,0,0) scale(1.3) rotate(-15deg); opacity: 1; }
+  40%  { transform: translate3d(-5px,0,0) scale(0.9) rotate(10deg); opacity: 0.8; }
+  65%  { transform: translate3d(0,20%,0) scale(0.6) rotate(-8deg); opacity: 0.5; }
+  100% { transform: translate3d(0,60%,0) scale(0.1) rotate(45deg); opacity: 0; }
 }
 
 /* Attacker flies in from left, delivers blow, vanishes */
 @keyframes attackerFlyIn {
-  0%   { transform: translateX(-180%) scale(0.5) skewX(20deg); opacity: 0; }
-  35%  { transform: translateX(-10%) scale(1.4) skewX(-10deg); opacity: 1; }
-  50%  { transform: translateX(0) scale(1.25); opacity: 1; }
-  85%  { transform: translateX(20%) scale(1); opacity: 0.8; }
-  100% { transform: translateX(50%) scale(0.8); opacity: 0; }
+  0%   { transform: translate3d(-180%,0,0) scale(0.5) skewX(20deg); opacity: 0; }
+  35%  { transform: translate3d(-10%,0,0) scale(1.4) skewX(-10deg); opacity: 1; }
+  50%  { transform: translate3d(0,0,0) scale(1.25); opacity: 1; }
+  85%  { transform: translate3d(20%,0,0) scale(1); opacity: 0.8; }
+  100% { transform: translate3d(50%,0,0) scale(0.8); opacity: 0; }
 }
 
 /* Screenshake for impact */
@@ -175,11 +175,11 @@
 
 /* Purple obliteration: orbs collide → Hollow Purple explosion */
 @keyframes hollowPurpleBlast {
-  0%   { transform: scale(0); opacity: 0; }
-  15%  { transform: scale(0.2); opacity: 1; }
-  40%  { transform: scale(1.3); opacity: 1; box-shadow: 0 0 80px #a855f7, 0 0 160px #7c3aed; }
-  70%  { transform: scale(2.2); opacity: 0.6; }
-  100% { transform: scale(4); opacity: 0; }
+  0%   { transform: translate3d(0,0,0) scale(0); opacity: 0; }
+  15%  { transform: translate3d(0,0,0) scale(0.2); opacity: 1; }
+  40%  { transform: translate3d(0,0,0) scale(1.3); opacity: 1; }
+  70%  { transform: translate3d(0,0,0) scale(2.2); opacity: 0.6; }
+  100% { transform: translate3d(0,0,0) scale(4); opacity: 0; }
 }
 
 /* Board flash purple */

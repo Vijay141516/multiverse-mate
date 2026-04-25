@@ -618,7 +618,10 @@ export default function AbilityEffect({
           justifyContent: 'center',
           animation: `attackerFlyIn ${dur * 0.8}ms cubic-bezier(0.16, 1, 0.3, 1) forwards`,
           zIndex: 10,
-          filter: `drop-shadow(0 0 40px ${PIECE_GLOW[attackerType]}) drop-shadow(0 0 80px ${PIECE_GLOW[attackerType]}88)`,
+          filter: window.innerWidth < 768 
+            ? `drop-shadow(0 0 20px ${PIECE_GLOW[attackerType]})`
+            : `drop-shadow(0 0 40px ${PIECE_GLOW[attackerType]}) drop-shadow(0 0 80px ${PIECE_GLOW[attackerType]}88)`,
+          willChange: 'transform, opacity',
         }}>
           <img
             src={`/pieces/${attackerColor}_${attackerType}.png`}
@@ -657,7 +660,10 @@ export default function AbilityEffect({
           justifyContent: 'center',
           animation: `victimStagger ${dur}ms ease-in-out forwards`,
           zIndex: 5,
-          filter: `drop-shadow(0 0 20px rgba(255,50,50,0.6)) drop-shadow(0 0 40px rgba(255,0,0,0.3))`,
+          filter: window.innerWidth < 768
+            ? `drop-shadow(0 0 15px rgba(255,50,50,0.5))`
+            : `drop-shadow(0 0 20px rgba(255,50,50,0.6)) drop-shadow(0 0 40px rgba(255,0,0,0.3))`,
+          willChange: 'transform, opacity',
         }}>
           <img
             src={`/pieces/${capturedColor}_${capturedType}.png`}
