@@ -63,6 +63,7 @@ export default function GamePage(props: GamePageProps) {
   const auraColor = dominantColor ? RANK_AURA[dominantRank] : 'transparent';
 
   const localAvatarId = parseInt(localStorage.getItem('anime_chess_avatar_id') || '1');
+  const localAvatarUrl = localStorage.getItem('anime_chess_avatar_custom_url') || '';
   const botAvatarId = 99; // A mechanical or generic bot-like waifu for the AI
 
   const topColor: Color = isFlipped ? playerColor : aiColor;
@@ -73,6 +74,8 @@ export default function GamePage(props: GamePageProps) {
 
   const topAvatarId = playerMode === 'local' ? undefined : (playerMode === 'ai' ? (isFlipped ? localAvatarId : botAvatarId) : undefined);
   const bottomAvatarId = playerMode === 'local' ? undefined : (playerMode === 'ai' ? (isFlipped ? botAvatarId : localAvatarId) : undefined);
+  const topAvatarUrl = playerMode === 'ai' ? (isFlipped ? localAvatarUrl : '') : '';
+  const bottomAvatarUrl = playerMode === 'ai' ? (isFlipped ? '' : localAvatarUrl) : '';
 
   const getRank = (c: Color) => c === 'white' ? whiteRank : blackRank;
   const getScore = (c: Color) => c === 'white' ? materialScore.white : materialScore.black;
@@ -269,6 +272,7 @@ export default function GamePage(props: GamePageProps) {
             isCheck={gameState.isCheck && gameState.currentTurn === topColor}
             isAiThinking={isAiThinking && playerMode === 'ai' && topColor === aiColor}
             avatarId={topAvatarId}
+            avatarUrl={topAvatarUrl}
           />
         </div>
 
@@ -306,6 +310,7 @@ export default function GamePage(props: GamePageProps) {
             isCurrentTurn={gameState.currentTurn === bottomColor}
             isCheck={gameState.isCheck && gameState.currentTurn === bottomColor}
             avatarId={bottomAvatarId}
+            avatarUrl={bottomAvatarUrl}
           />
         </div>
 
