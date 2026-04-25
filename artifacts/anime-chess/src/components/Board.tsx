@@ -48,41 +48,56 @@ export default function Board({
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
-  const handleDragStart = useCallback((e: React.DragEvent, pos: Position) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent, pos: Position) => {
     const piece = board[pos.row][pos.col];
-    if (!piece) return;
+    if (!piece || (piece.color !== currentTurn && piece.color !== playerColor)) return;
+    
+    // Start dragging
     setDragFrom(pos);
-    // Trigger selection so legal moves highlight
-    onSquareClick(pos);
-    // Transparent drag image
-    const img = new Image();
-    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
-    e.dataTransfer.setDragImage(img, 0, 0);
-    e.dataTransfer.effectAllowed = 'move';
-  }, [board, onSquareClick]);
-
-  const handleDragOver = useCallback((e: React.DragEvent, pos: Position) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOver(pos);
     setGhostPos({ x: e.clientX, y: e.clientY });
-  }, []);
+    onSquareClick(pos); // Select the piece to show legal moves
+    
+    // Capture pointer to track movement outside the element
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [board, currentTurn, playerColor, onSquareClick]);
 
-  const handleDrop = useCallback((e: React.DragEvent, pos: Position) => {
-    e.preventDefault();
-    setDragOver(null);
-    setGhostPos(null);
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!dragFrom) return;
-    setDragFrom(null);
-    // The click handler handles both selection and move
-    onSquareClick(pos);
-  }, [dragFrom, onSquareClick]);
+    setGhostPos({ x: e.clientX, y: e.clientY });
 
-  const handleDragEnd = useCallback(() => {
+    // Find what square we are over
+    if (boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const col = Math.floor((x / rect.width) * 8);
+      const row = Math.floor((y / rect.height) * 8);
+      
+      if (col >= 0 && col < 8 && row >= 0 && row < 8) {
+        const boardRow = flipped ? 7 - row : row;
+        const boardCol = flipped ? 7 - col : col;
+        setDragOver({ row: boardRow, col: boardCol });
+      } else {
+        setDragOver(null);
+      }
+    }
+  }, [dragFrom, flipped]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    if (!dragFrom) return;
+
+    if (dragOver) {
+      // If we dropped on a different square, attempt a move
+      if (dragOver.row !== dragFrom.row || dragOver.col !== dragFrom.col) {
+        onSquareClick(dragOver);
+      }
+    }
+
     setDragFrom(null);
     setDragOver(null);
     setGhostPos(null);
-  }, []);
+  }, [dragFrom, dragOver, onSquareClick]);
 
   const checkKingPos = isCheck ? getKingPos(board, currentTurn) : null;
   const cells: React.ReactNode[] = [];
@@ -122,8 +137,6 @@ export default function Board({
         <div
           key={`${boardRow}-${boardCol}`}
           onClick={() => { if (!dragFrom) onSquareClick(pos); }}
-          onDragOver={e => handleDragOver(e, pos)}
-          onDrop={e => handleDrop(e, pos)}
           style={{
             position: 'relative',
             background: bg,
@@ -136,6 +149,7 @@ export default function Board({
             minWidth: 0,
             minHeight: 0,
             outline: isDragOver && isLegal ? '2px solid rgba(90,220,110,0.9)' : 'none',
+            touchAction: 'none', // Prevent scrolling while dragging
           }}
         >
           {isSuggestedTo && (
@@ -198,18 +212,18 @@ export default function Board({
           )}
 
           {/* Chess piece — draggable */}
-          {piece && (
             <div
-              draggable={canDrag}
-              onDragStart={canDrag ? e => handleDragStart(e, pos) : undefined}
-              onDragEnd={handleDragEnd}
+              onPointerDown={e => handlePointerDown(e, pos)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
               style={{
                 width:'100%', height:'100%', zIndex: 5,
                 cursor: canDrag ? 'grab' : 'default',
-                transform: 'scale(1)',
+                transform: isDragSrc ? 'scale(0.8)' : 'scale(1)',
+                opacity: isDragSrc ? 0.5 : 1,
                 transition: 'transform 0.15s ease',
-
                 userSelect:'none',
+                touchAction: 'none',
               }}
             >
               <ChessPiece
