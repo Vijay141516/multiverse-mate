@@ -74,44 +74,6 @@ export default function MenuPage({
     localStorage.setItem('anime_chess_player_name', name);
   };
 
-  const handleUpdateAvatarUrl = (url: string) => {
-    setAvatarUrl(url);
-    if (url) {
-      localStorage.setItem('anime_chess_avatar_custom_url', url);
-    } else {
-      localStorage.removeItem('anime_chess_avatar_custom_url');
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          // Compress image to max 400x400
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const max = 400;
-          if (width > height) {
-            if (width > max) { height *= max / width; width = max; }
-          } else {
-            if (height > max) { width *= max / height; height = max; }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-          handleUpdateAvatarUrl(compressedBase64);
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const randomizeAvatar = () => {
     setAvatarUrl('');
@@ -704,20 +666,6 @@ export default function MenuPage({
                       placeholder="Enter name..."
                     />
 
-                    <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.3em] ml-1 mb-2 block">Custom Avatar URL</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={avatarUrl}
-                        onChange={(e) => handleUpdateAvatarUrl(e.target.value)}
-                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white text-xs font-medium focus:outline-none focus:border-blue-500/30 transition-all"
-                        placeholder="https://image.url/..."
-                      />
-                      <label className="cursor-pointer px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-white text-[10px] font-black uppercase transition-all flex items-center justify-center">
-                        Upload
-                        <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                      </label>
-                    </div>
                   </div>
 
                   <button
